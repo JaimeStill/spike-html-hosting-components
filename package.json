@@ -1,0 +1,14 @@
+{
+  "name": "@jaimestill/spike-html-hosting-components",
+  "version": "0.0.0",
+  "private": false,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JaimeStill/spike-html-hosting-components"
+  },
+  "type": "module",
+  "devDependencies": {
+    "prettier": "3.9.10"
+  }
+}
