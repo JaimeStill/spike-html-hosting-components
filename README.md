@@ -73,13 +73,13 @@ GitHub's heading id, with a nested `ul` or `ol` for the `h3`s under it:
 - The link of the section in view carries `aria-current="location"`: the last section whose
   heading has reached the reading line, a third of the way down the viewport, or the first before
   any has.
-- ArrowLeft and ArrowRight move to the previous and the next section, scrolling its heading to the
-  top, bound by `register()` in the foundation's keys module, so its help dialog lists them as
-  "Previous section" and "Next section"; ArrowUp and ArrowDown stay the browser's own scrolling.
-  The keys module's off switch covers character keys alone, which the arrows are not, so the
-  element reads the reader's setting at each press and does nothing while it is off. The Previous
-  and Next buttons, each with its bracketed key hint, move the same way whatever the setting. A
-  move scrolls smoothly unless the reader asks for reduced motion.
+- H and L move to the previous and the next section, scrolling its heading to the top, bound by
+  `register()` in the foundation's keys module, so its help dialog lists them as "Previous
+  section" and "Next section" and its off switch, which covers character keys, turns them off.
+  Every arrow key stays the browser's own scrolling, in the page and in any region that scrolls
+  sideways. The Previous and Next buttons, with the bracketed key hints [H] and [L], move the same
+  way whatever the setting, and carry `aria-keyshortcuts` while the keys are on. A move scrolls
+  smoothly unless the reader asks for reduced motion.
 - The reading progress is a bar the page's scroll drives through a CSS scroll timeline, with no
   script; in an engine without scroll timelines it is absent and nothing else changes.
 - With no script the list renders and every link jumps to its section; the buttons, the mark, and

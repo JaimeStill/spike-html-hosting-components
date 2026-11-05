@@ -1,8 +1,9 @@
 // sl-section-tree from this repository's dist/, on test/fixtures/section-tree.html, through its
 // public seam alone: the slotted list, the aria-current mark, the keys, the buttons, and the
 // progress bar. With no script the list renders and its links jump; aria-current follows the
-// scroll; ArrowRight and ArrowLeft move between sections, which the keys help dialog lists, and
-// do nothing with the keys turned off, while ArrowDown stays the browser's scrolling; a move is
+// scroll; L and H move between sections, which the keys help dialog lists, and do nothing with
+// the keys turned off, while every arrow stays the browser's scrolling, in the page and in a
+// region that scrolls sideways; a move is
 // smooth unless the reader asks for reduced motion; the progress bar runs on the root's scroll
 // timeline, guarded by @supports; and the tree renders in every profile the foundation's full
 // entry registers, light and dark, at 1280 and 390 px, with no sideways scroll and its focus
@@ -32,6 +33,8 @@ const HEADINGS = `${LINKS}.map((a) => document.getElementById(decodeURIComponent
 
 /** The keys the cases press, as the protocol's key events give them. */
 const KEYS = {
+  h: { key: "h", code: "KeyH", windowsVirtualKeyCode: 72, text: "h" },
+  l: { key: "l", code: "KeyL", windowsVirtualKeyCode: 76, text: "l" },
   ArrowLeft: { key: "ArrowLeft", code: "ArrowLeft", windowsVirtualKeyCode: 37 },
   ArrowRight: { key: "ArrowRight", code: "ArrowRight", windowsVirtualKeyCode: 39 },
   ArrowDown: { key: "ArrowDown", code: "ArrowDown", windowsVirtualKeyCode: 40 },
@@ -206,41 +209,79 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       await until(page, `${LINKS}[0].getAttribute("aria-current") === "location"`);
     });
 
-    test("ArrowRight and ArrowLeft move to the next and the previous section", async () => {
-      await press(page, "ArrowRight");
+    test("L and H move to the next and the previous section", async () => {
+      await press(page, "l");
       await still(page);
       assert.deepEqual(await current(page), { index: 1, marked: 1 });
       assert.ok(Math.abs(await headingTop(page, 1)) <= 1, "the next heading is at the top");
-      await press(page, "ArrowRight");
+      await press(page, "l");
       await still(page);
       assert.deepEqual(await current(page), { index: 2, marked: 1 });
-      await press(page, "ArrowLeft");
+      await press(page, "h");
       await still(page);
       assert.deepEqual(await current(page), { index: 1, marked: 1 });
       assert.ok(Math.abs(await headingTop(page, 1)) <= 1, "the previous heading is at the top");
     });
 
-    test("ArrowRight reaches the last section where the page can't scroll it to the line", async () => {
+    test("L reaches the last section where the page can't scroll it to the line", async () => {
       const count: number = await page.evaluate(`${LINKS}.length`);
       for (let i = 1; i < count; i++) {
-        await press(page, "ArrowRight");
+        await press(page, "l");
         await still(page);
         assert.deepEqual(await current(page), { index: i, marked: 1 }, `move ${i}`);
       }
-      await press(page, "ArrowRight");
+      await press(page, "l");
       await still(page);
       assert.deepEqual(await current(page), { index: count - 1, marked: 1 }, "past the last");
       const next: boolean = await page.evaluate(`${SHADOW}.querySelector(".next").disabled`);
       assert.equal(next, true, "Next is disabled at the last section");
     });
 
-    test("ArrowDown stays the browser's scrolling, firing no binding", async () => {
-      await page.evaluate(`window.fired = [];
-        document.addEventListener("keys-fire", (event) => window.fired.push(event.detail.binding));`);
+    /** Records each keys-fire binding, and each keydown's key and whether it was cancelled. */
+    const record = () =>
+      page.evaluate(`window.fired = [];
+        window.pressed = [];
+        document.addEventListener("keys-fire", (event) => window.fired.push(event.detail.binding));
+        // On the window, so it runs after the keys module's listener on the document.
+        addEventListener("keydown", (event) =>
+          window.pressed.push({ key: event.key, cancelled: event.defaultPrevented }));`);
+
+    test("the arrows stay the browser's scrolling, firing no binding and never cancelled", async () => {
+      await record();
+      await press(page, "ArrowRight");
+      await press(page, "ArrowLeft");
       await press(page, "ArrowDown");
       await until(page, "scrollY > 0");
       assert.deepEqual(await page.evaluate("window.fired"), []);
+      assert.deepEqual(await page.evaluate("window.pressed"), [
+        { key: "ArrowRight", cancelled: false },
+        { key: "ArrowLeft", cancelled: false },
+        { key: "ArrowDown", cancelled: false },
+      ]);
       assert.deepEqual(await current(page), { index: 0, marked: 1 });
+    });
+
+    test("ArrowRight and ArrowLeft scroll a focused region sideways", async () => {
+      await page.evaluate(`(() => {
+        const region = document.getElementById("wide");
+        region.scrollIntoView({ block: "center", behavior: "instant" });
+        region.focus();
+      })()`);
+      await still(page);
+      const before: { index: number; marked: number } = await current(page);
+      const wide: { scroll: number; client: number } = await page.evaluate(`(() => {
+        const region = document.getElementById("wide");
+        return { scroll: region.scrollWidth, client: region.clientWidth };
+      })()`);
+      assert.ok(wide.scroll > wide.client, `the region scrolls: ${JSON.stringify(wide)}`);
+      await record();
+      await press(page, "ArrowRight");
+      await until(page, `document.getElementById("wide").scrollLeft > 0`);
+      const right: number = await page.evaluate(`document.getElementById("wide").scrollLeft`);
+      await press(page, "ArrowLeft");
+      await until(page, `document.getElementById("wide").scrollLeft < ${right}`);
+      assert.deepEqual(await page.evaluate("window.fired"), []);
+      assert.deepEqual(await current(page), before, "the section in view is unchanged");
     });
 
     test("the buttons move between sections, each showing its bracketed key hint", async () => {
@@ -251,8 +292,8 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
           disabled: button.disabled,
         }))`);
       assert.deepEqual(shown, [
-        { text: "Previous [←]", keys: "ArrowLeft", disabled: true },
-        { text: "Next [→]", keys: "ArrowRight", disabled: false },
+        { text: "Previous [H]", keys: "H", disabled: true },
+        { text: "Next [L]", keys: "L", disabled: false },
       ]);
       await page.evaluate(`${SHADOW}.querySelector(".next").click()`);
       await still(page);
@@ -268,11 +309,11 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       const rows: string[][] = await page.evaluate(`[...document.querySelectorAll(
         "#help [data-keys-table] tbody tr")].map((tr) => [...tr.cells].map((td) => td.textContent.trim()))`);
       assert.ok(
-        rows.some(([keys, action]) => keys === "ArrowLeft" && action === "Previous section"),
+        rows.some(([keys, action]) => keys === "H" && action === "Previous section"),
         JSON.stringify(rows),
       );
       assert.ok(
-        rows.some(([keys, action]) => keys === "ArrowRight" && action === "Next section"),
+        rows.some(([keys, action]) => keys === "L" && action === "Next section"),
         JSON.stringify(rows),
       );
       await page.evaluate(`[...document.querySelectorAll("#help [data-keys-table] button")]
@@ -282,17 +323,32 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       assert.deepEqual(await current(page), { index: 1, marked: 1 });
     });
 
-    test("with the keys turned off in the help dialog, the arrows do nothing", async () => {
+    test("with the keys turned off in the help dialog, it marks H and L off and they do nothing", async () => {
       await press(page, "?");
       await until(page, `document.querySelector("#help [name=enabled]")`);
       await page.evaluate(`document.querySelector("#help [name=enabled]").click()`);
+      const rows: { keys: string; action: string; off: boolean }[] = await page.evaluate(`[
+        ...document.querySelectorAll("#help [data-keys-table] tbody tr")].map((tr) => ({
+          keys: tr.cells[0].textContent.trim(),
+          action: tr.cells[1].textContent.trim(),
+          off: tr.hasAttribute("data-keys-off"),
+        }))`);
+      for (const [keys, action] of [
+        ["H", "Previous section"],
+        ["L", "Next section"],
+      ]) {
+        assert.ok(
+          rows.some((row) => row.keys === `${keys} off` && row.action === action && row.off),
+          `${action} is marked off: ${JSON.stringify(rows)}`,
+        );
+      }
       await page.evaluate(`document.querySelector("#help").close()`);
       await until(page, `!document.querySelector("#help").open`);
       const keys: (string | null)[] = await page.evaluate(
         `[...${SHADOW}.querySelectorAll(".moves button")].map((b) => b.getAttribute("aria-keyshortcuts"))`,
       );
       assert.deepEqual(keys, [null, null], "no aria-keyshortcuts while the keys are off");
-      await press(page, "ArrowRight");
+      await press(page, "l");
       await still(page);
       assert.equal(await page.evaluate("scrollY"), 0);
       assert.deepEqual(await current(page), { index: 0, marked: 1 });
@@ -300,7 +356,7 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       await page.evaluate(`${SHADOW}.querySelector(".next").click()`);
       await still(page);
       assert.deepEqual(await current(page), { index: 1, marked: 1 });
-      await press(page, "ArrowLeft");
+      await press(page, "h");
       await still(page);
       assert.deepEqual(await current(page), { index: 1, marked: 1 });
     });
@@ -309,8 +365,8 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       const target: number = await page.evaluate(
         `${HEADINGS}[2].getBoundingClientRect().top + scrollY`,
       );
-      await press(page, "ArrowRight");
-      await press(page, "ArrowRight");
+      await press(page, "l");
+      await press(page, "l");
       const at: number = await page.evaluate("scrollY");
       assert.ok(Math.abs(at - target) <= 1, `scrollY ${at} is at ${target} at once`);
     });
@@ -320,7 +376,7 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       const target: number = await page.evaluate(
         `${HEADINGS}[1].getBoundingClientRect().top + scrollY`,
       );
-      await press(page, "ArrowRight");
+      await press(page, "l");
       const at: number = await page.evaluate("scrollY");
       assert.ok(at < target - 1, `scrollY ${at} is short of ${target} as the move begins`);
       await until(page, `Math.abs(scrollY - ${target}) <= 1`);
@@ -469,7 +525,7 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
           );
         }
         assert.equal(focused[0].name, "Install", name);
-        assert.equal(focused[1].name, "Next [→]", name);
+        assert.equal(focused[1].name, "Next [L]", name);
         for (const { name: what, visible, outline } of focused) {
           assert.ok(visible, `${name}: ${what} matches :focus-visible`);
           assert.match(outline, /^solid [1-9]/, `${name}: ${what}'s outline is drawn`);

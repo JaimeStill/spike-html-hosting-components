@@ -22,9 +22,10 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the packag
   `aria-current="page"`. A change to the list is a release of the components.
 - `sl-section-tree`, `section-tree.js`: a page's table of contents, slotting a nested list of
   links to its h2 and h3 headings. The link of the section in view carries
-  `aria-current="location"`; Left and Right move to the previous and next section through the
-  foundation's keys module, beside Previous and Next buttons with bracketed key hints; a CSS
-  scroll timeline draws the reading progress, absent where scroll timelines aren't supported.
+  `aria-current="location"`; H and L move to the previous and next section through the
+  foundation's keys module, beside Previous and Next buttons with the bracketed key hints [H] and
+  [L], while every arrow key stays the browser's scrolling; a CSS scroll timeline draws the
+  reading progress, absent where scroll timelines aren't supported.
 - The components toolchain, adapted from spike-html-apps-components (51d2b92): the tsc build
   to ES modules and declarations, ESLint with the layer's import rules, the unit tier, the
   browser tier in chrome-headless-shell 157.0.8103.38 on spike-html-apps-tooling v0.3.0, and

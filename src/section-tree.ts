@@ -1,6 +1,6 @@
 // The section tree, Lit with a shadow root on the foundation's reset and elements sheets: a page's
-// table of contents, its links slotted from the light DOM, the section in view marked, Left and
-// Right bound through the foundation's keys module, and the reading progress a CSS scroll timeline
+// table of contents, its links slotted from the light DOM, the section in view marked, H and L
+// bound through the foundation's keys module, and the reading progress a CSS scroll timeline
 // draws.
 
 import { html, LitElement, nothing, type PropertyDeclarations } from "lit";
@@ -14,9 +14,16 @@ import styles from "./section-tree.css" with { type: "css" };
 /** The tag the element defines. */
 export const tagName = "sl-section-tree";
 
-/** The keys that move to the previous and the next section, as the keys grammar names them. */
-export const PREVIOUS_KEYS = "ArrowLeft";
-export const NEXT_KEYS = "ArrowRight";
+/**
+ * The keys that move to the previous and the next section, as the keys grammar names them: a
+ * lowercase letter matches either case, as the foundation's own T binding is written.
+ */
+export const PREVIOUS_KEYS = "h";
+export const NEXT_KEYS = "l";
+
+/** The buttons' aria-keyshortcuts for the two bindings, as the keys module writes a letter's. */
+export const PREVIOUS_SHORTCUT = "H";
+export const NEXT_SHORTCUT = "L";
 
 /** The labels the keys help dialog lists the two bindings by. */
 export const PREVIOUS_LABEL = "Previous section";
@@ -76,12 +83,13 @@ const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
  * the way down the viewport, or the first before any has. The mark is an attribute on the light-DOM
  * link, which a shadow sheet can't reach below the slot's top level, so its look is the page's.
  *
- * Left and Right move to the previous and the next section, scrolling its heading to the top, by
- * register() in the foundation's keys module, so its help dialog lists them; Up and Down stay the
- * browser's own scrolling. The keys module's off switch covers character keys alone, which the
- * arrows are not, so the element reads the reader's setting at each press and does nothing while
- * it is off. The Previous and Next buttons, each with its bracketed key hint, move the same way
- * whatever the setting. A move scrolls smoothly unless the reader asks for reduced motion.
+ * H and L move to the previous and the next section, scrolling its heading to the top, by
+ * register() in the foundation's keys module, so its help dialog lists them and its off switch,
+ * which covers character keys, turns them off. Every arrow key stays the browser's own scrolling,
+ * in the page and in any region that scrolls sideways: the keys module cancels each key a binding
+ * matches, so the element binds none. The Previous and Next buttons, with the bracketed key hints
+ * [H] and [L], move the same way whatever the setting, and carry aria-keyshortcuts while the
+ * setting has the keys fire. A move scrolls smoothly unless the reader asks for reduced motion.
  *
  * The reading progress is a bar the page's scroll drives through a CSS scroll timeline, with no
  * script: in an engine without scroll timelines it is absent and nothing else changes.
@@ -126,12 +134,14 @@ export class SectionTree extends LitElement {
   connectedCallback(): void {
     super.connectedCallback();
     this.#unregister = [
-      register(PREVIOUS_KEYS, PREVIOUS_LABEL, () => this.#press(-1)),
-      register(NEXT_KEYS, NEXT_LABEL, () => this.#press(1)),
+      register(PREVIOUS_KEYS, PREVIOUS_LABEL, () => this.#move(-1)),
+      register(NEXT_KEYS, NEXT_LABEL, () => this.#move(1)),
     ];
     document.addEventListener("scrollend", this.#settle);
-    // The keys setting changes in the help dialog's form, whose own listener sits below the
-    // document and so runs first, or in another tab.
+    // aria-keyshortcuts follows the keys setting. The keys module keeps it current on data-keys
+    // elements alone, which it finds in the document and never in a shadow root, so the element
+    // reads the setting as it changes: in the help dialog's form, whose own listener sits below
+    // the document and so runs first, or in another tab.
     document.addEventListener("change", this.#refresh);
     addEventListener("storage", this.#refresh);
     this.#refresh();
@@ -162,20 +172,20 @@ export class SectionTree extends LitElement {
           <button
             type="button"
             class="previous"
-            aria-keyshortcuts=${shortcut(PREVIOUS_KEYS)}
+            aria-keyshortcuts=${shortcut(PREVIOUS_SHORTCUT)}
             ?disabled=${this._index <= 0}
             @click=${() => this.#move(-1)}
           >
-            Previous ${hint("←")}
+            Previous ${hint(PREVIOUS_SHORTCUT)}
           </button>
           <button
             type="button"
             class="next"
-            aria-keyshortcuts=${shortcut(NEXT_KEYS)}
+            aria-keyshortcuts=${shortcut(NEXT_SHORTCUT)}
             ?disabled=${this._index >= this._count - 1}
             @click=${() => this.#move(1)}
           >
-            Next ${hint("→")}
+            Next ${hint(NEXT_SHORTCUT)}
           </button>
         </div>
       </nav>
@@ -244,11 +254,6 @@ export class SectionTree extends LitElement {
       if (i === index) link.setAttribute("aria-current", CURRENT);
       else if (link.getAttribute("aria-current") === CURRENT) link.removeAttribute("aria-current");
     });
-  }
-
-  /** A key's move, which does nothing while the reader has turned the keys off. */
-  #press(step: number): void {
-    if (settings().enabled) this.#move(step);
   }
 
   /** Scrolls the section `step` places from the one in view to the top, and marks it. */

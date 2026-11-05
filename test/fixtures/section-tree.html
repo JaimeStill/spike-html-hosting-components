@@ -5,8 +5,9 @@
      foundation's full entry, page-full.css, styles it with register-full.js, so every built-in
      profile is linked and registered, and the query's palette, space, type, and scheme set the
      root's data-palette, data-space, data-type, and data-scheme. With no script the page is the
-     list and the sections, every link a plain jump to its heading. The help dialog is the keys
-     module's, opened by ? or its button.
+     list and the sections, every link a plain jump to its heading. One section holds a focusable
+     region that scrolls a wide table sideways. The help dialog is the keys module's, opened by ?
+     or its button.
      window.errors collects every error and unhandled rejection the page raises; window.ready
      settles once the tree has rendered. Lit's and the foundation's bare specifiers map onto
      /deps/, where the server answers with the installed packages; the foundation's map onto its
@@ -40,6 +41,8 @@
          mark on the link of the section in view is the page's paint too. */
       body {
         display: grid;
+        /* One column, which the wide region's table never widens. */
+        grid-template-columns: minmax(0, 1fr);
         gap: var(--space-l);
         padding: var(--space-m);
       }
@@ -60,6 +63,13 @@
       }
       sl-section-tree a[aria-current] {
         font-weight: 600;
+      }
+      /* A region that scrolls sideways, around a table wider than it. */
+      .wide {
+        overflow-x: auto;
+      }
+      .wide table {
+        inline-size: 200vw;
       }
     </style>
     <script type="importmap">
@@ -115,7 +125,7 @@
           <li>
             <a href="#keys">Keys</a>
             <ul>
-              <li><a href="#left-and-right">Left and Right</a></li>
+              <li><a href="#h-and-l">H and L</a></li>
               <li><a href="#the-off-switch">The off switch</a></li>
             </ul>
           </li>
@@ -174,8 +184,13 @@
         <p>The section tree's fixture text runs long enough that every section takes more than a screen, so the reading line meets each heading in turn as the page scrolls. It says nothing in particular: it is here to be scrolled past, at a wide and a narrow width, in every profile and scheme.</p>
         <p>The section tree's fixture text runs long enough that every section takes more than a screen, so the reading line meets each heading in turn as the page scrolls. It says nothing in particular: it is here to be scrolled past, at a wide and a narrow width, in every profile and scheme.</p>
         <p>The section tree's fixture text runs long enough that every section takes more than a screen, so the reading line meets each heading in turn as the page scrolls. It says nothing in particular: it is here to be scrolled past, at a wide and a narrow width, in every profile and scheme.</p>
-        <h3 id="left-and-right">Left and Right</h3>
+        <h3 id="h-and-l">H and L</h3>
         <p>The section tree's fixture text runs long enough that every section takes more than a screen, so the reading line meets each heading in turn as the page scrolls. It says nothing in particular: it is here to be scrolled past, at a wide and a narrow width, in every profile and scheme.</p>
+        <div id="wide" role="region" aria-label="A wide table" tabindex="0" class="wide">
+          <table>
+            <tr><td>A table wider than its region, which scrolls it sideways: ArrowLeft and ArrowRight are its scrolling, never a binding of the tree's.</td></tr>
+          </table>
+        </div>
         <p>The section tree's fixture text runs long enough that every section takes more than a screen, so the reading line meets each heading in turn as the page scrolls. It says nothing in particular: it is here to be scrolled past, at a wide and a narrow width, in every profile and scheme.</p>
         <p>The section tree's fixture text runs long enough that every section takes more than a screen, so the reading line meets each heading in turn as the page scrolls. It says nothing in particular: it is here to be scrolled past, at a wide and a narrow width, in every profile and scheme.</p>
         <h3 id="the-off-switch">The off switch</h3>
