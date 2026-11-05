@@ -6,11 +6,15 @@
  *
  * The list is a row of links, wrapping onto a second line rather than widen the page; the links
  * are the shadow root's own, so the current site's mark is styled here, its text the strongest
- * and its weight the terms'. Focus keeps the elements sheet's outline.
+ * and its weight the terms'. Focus keeps the elements sheet's outline. Navigation text never
+ * breaks inside a word: the host sets overflow-wrap and word-break to normal, so a page's own
+ * mid-word breaking, inherited from an ancestor, stops at the nav.
  */
 
 :host {
   display: block;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 ul {
   display: flex;

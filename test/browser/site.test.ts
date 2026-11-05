@@ -1,19 +1,23 @@
-// sl-page-header, sl-site-index, and sl-site-nav from this repository's dist/, on the fixture
-// sites under test/fixtures/sites/, each served at its own base on one origin, through their
-// public seams alone. With no script the front matter and the site index render, and the page
-// reads without the site nav; the header slots the front matter as a grid of terms beside their
-// values, in source order and as text, and an empty or absent dl renders nothing; the index marks
-// the page on screen, a directory labeled by its index page or its name; the nav lists the
-// components' sites and marks the current one by the path's first segment; every component
-// renders in every profile the foundation's full entry registers, light and dark, at 1280 and
-// 390 px, with no sideways scroll and its focus drawn; and the theme saved through the menu on
-// one site applies before first paint on the other, a palette the other doesn't register falling
-// back to its default and staying stored.
+// sl-page-header, sl-site-index, sl-site-nav, and sl-drawer from this repository's dist/, on the
+// fixture sites under test/fixtures/sites/, each served at its own base on one origin, through
+// their public seams alone. With no script the front matter and the site index render, wide and
+// narrow, the Pages button hidden, and the page reads without the site nav; the site index sits in
+// the Pages drawer, docked beside the article wide, and narrow a modal dialog the Pages button or
+// P opens, which Escape or its Close button closes, focus back on the button; no navigation text
+// breaks inside a word, whatever the page inherits; the header slots the front matter as a grid
+// of terms beside their values, in source order and as text, and an empty or absent dl renders
+// nothing; the index marks the page on screen, a directory labeled by its index page or its name;
+// the nav lists the components' sites and marks the current one by the path's first segment;
+// every component renders in every profile the foundation's full entry registers, light and dark,
+// at 1280 and 390 px, with no sideways scroll and its focus drawn, and at 390 px the drawer open
+// as a modal dialog the same; and the theme saved through the
+// menu on one site applies before first paint on the other, a palette the other doesn't register
+// falling back to its default and staying stored.
 
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 
-import { launch, SETTLED } from "@jaimestill/spike-html-apps-tooling/browser.js";
+import { launch, SETTLED, until } from "@jaimestill/spike-html-apps-tooling/browser.js";
 import type { Browser, Page } from "@jaimestill/spike-html-apps-tooling/browser.js";
 import { serve } from "@jaimestill/spike-html-apps-tooling/server.js";
 import type { Server } from "@jaimestill/spike-html-apps-tooling/server.js";
@@ -50,6 +54,9 @@ const SITES = [
   ["Architecture", "/spike-html-hosting-architecture/"],
   ["sqlate", "/spike-html-hosting-sqlate/"],
 ];
+
+/** The drawer's default dock, 48rem, at the initial font size, in px: the fixture sites' too. */
+const DOCK = 768;
 
 /** The localStorage key the foundation's preferences keep the theme under. */
 const KEY = "spike-html-apps-foundation.preferences";
@@ -167,15 +174,26 @@ describe("the site components", { timeout: 180_000 }, () => {
       assert.equal(shown.markup, 0, "no value parsed as markup");
     });
 
-    test("the site index renders, every link and directory label shown", async () => {
-      const shown: { text: string; seen: boolean }[] = await page.evaluate(
-        `[...document.querySelectorAll("sl-site-index li > :is(a, span)")].map((el) => {
-          const box = el.getBoundingClientRect();
-          return { text: el.textContent.trim(), seen: box.width > 0 && box.height > 0 };
-        })`,
-      );
-      assert.ok(shown.length >= 10, `the index holds ${shown.length} entries`);
-      for (const { text, seen } of shown) assert.ok(seen, `${text} is shown`);
+    test("the site index renders, every link and directory label shown, and no Pages button, wide and narrow", async () => {
+      for (const width of [1280, 390]) {
+        await resize(page, width);
+        await page.goto(`${server.origin}${PAGES.index}`);
+        const shown: { text: string; seen: boolean }[] = await page.evaluate(
+          `[...document.querySelectorAll("sl-site-index li > :is(a, span)")].map((el) => {
+            const box = el.getBoundingClientRect();
+            return { text: el.textContent.trim(), seen: box.width > 0 && box.height > 0 };
+          })`,
+        );
+        assert.ok(shown.length >= 10, `the index holds ${shown.length} entries`);
+        for (const { text, seen } of shown) assert.ok(seen, `${text} is shown at ${width}px`);
+        assert.equal(
+          await page.evaluate(`document.querySelector(".pages-opener").checkVisibility()`),
+          false,
+          `no Pages button at ${width}px, with no drawer to open`,
+        );
+      }
+      await resize(page, 1280);
+      await page.goto(`${server.origin}${PAGES.index}`);
     });
 
     test("the site nav renders nothing, and the page reads without it", async () => {
@@ -330,6 +348,128 @@ describe("the site components", { timeout: 180_000 }, () => {
     });
   });
 
+  describe("the navigation text", () => {
+    test("never breaks inside a word in the site index or the site nav, whatever the page's breaking that they would inherit", async () => {
+      for (const width of [1280, 390]) {
+        await load(PAGES.index, { width });
+        await page.evaluate(`(() => {
+          const style = document.createElement("style");
+          style.textContent = "body, body > * { overflow-wrap: anywhere; word-break: break-all; }";
+          document.head.append(style);
+        })()`);
+        const wrapping: Record<string, string[]> = await page.evaluate(`(() => {
+          const of = (links) => [...new Set(links.map((a) => {
+            const style = getComputedStyle(a);
+            return style.overflowWrap + " " + style.wordBreak;
+          }))];
+          return { index: of(${INDEX_LINKS}), nav: of(${NAV_LINKS}) };
+        })()`);
+        assert.deepEqual(
+          wrapping,
+          { index: ["normal normal"], nav: ["normal normal"] },
+          `at ${width}px`,
+        );
+      }
+    });
+  });
+
+  describe("the Pages drawer", () => {
+    /** The P key, as the protocol's key events give it. */
+    const P = { key: "p", code: "KeyP", windowsVirtualKeyCode: 80 };
+    const ESCAPE = { key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 };
+    /** A key pressed and released on the focused element, with the text it types, if any. */
+    async function press(key: typeof P | typeof ESCAPE, text?: string): Promise<void> {
+      await page.cdp("Input.dispatchKeyEvent", {
+        type: text === undefined ? "rawKeyDown" : "keyDown",
+        ...key,
+        ...(text === undefined ? {} : { text, unmodifiedText: text }),
+      });
+      await page.cdp("Input.dispatchKeyEvent", { type: "keyUp", ...key });
+    }
+
+    /** The drawer's mode and dialog, the opener's state, and focus. */
+    const drawn = (): Promise<{
+      mode: string | null;
+      wrapper: string | null;
+      modal: boolean;
+      opener: { shown: boolean; expanded: string | null; shortcut: string | null };
+      links: boolean;
+      focused: string | null;
+    }> =>
+      page.evaluate(`(async () => {
+        const drawer = document.querySelector("sl-drawer");
+        await drawer.updateComplete;
+        const opener = document.querySelector(".pages-opener");
+        let focused = document.activeElement;
+        while (focused?.shadowRoot?.activeElement) focused = focused.shadowRoot.activeElement;
+        return {
+          mode: drawer.matches(":state(docked)") ? "docked" : drawer.matches(":state(drawer)") ? "drawer" : null,
+          wrapper: drawer.shadowRoot.querySelector("aside, dialog")?.localName ?? null,
+          modal: drawer.shadowRoot.querySelector("dialog")?.matches(":modal") ?? false,
+          opener: {
+            shown: opener.checkVisibility(),
+            expanded: opener.getAttribute("aria-expanded"),
+            shortcut: opener.getAttribute("aria-keyshortcuts"),
+          },
+          links: ${INDEX_LINKS}.every((a) => a.checkVisibility()),
+          focused: focused === document.body || focused === null ? null
+            : focused.textContent.replace(/\\s+/g, " ").trim(),
+        };
+      })()`);
+
+    test("wide, the drawer docks the site index as an aside, the Pages button hidden and P doing nothing", async () => {
+      await load(PAGES.index);
+      const docked = await drawn();
+      assert.deepEqual(
+        [docked.mode, docked.wrapper, docked.modal, docked.opener.shown, docked.links],
+        ["docked", "aside", false, false, true],
+      );
+      assert.deepEqual(
+        await page.evaluate(`${shadow("sl-drawer")}.querySelector("aside h2").textContent`),
+        "Pages",
+      );
+      await press(P, "p");
+      assert.deepEqual((await drawn()).modal, false, "P opens nothing while docked");
+    });
+
+    test("narrow, P opens it as a modal dialog, focus inside, and Escape closes it, focus back on the Pages button", async () => {
+      await load(PAGES.index, { width: 390 });
+      const closed = await drawn();
+      assert.deepEqual(
+        [closed.mode, closed.wrapper, closed.modal, closed.links],
+        ["drawer", "dialog", false, false],
+      );
+      assert.deepEqual(closed.opener, { shown: true, expanded: "false", shortcut: "P" });
+      await page.evaluate(`document.querySelector(".pages-opener").focus()`);
+      await press(P, "p");
+      await until(page, `document.querySelector("sl-drawer").open`);
+      const open = await drawn();
+      assert.deepEqual([open.modal, open.links, open.opener.expanded], [true, true, "true"]);
+      assert.equal(open.focused, "Close Pages", "focus is on the dialog's Close button");
+      await press(ESCAPE);
+      await until(page, `!document.querySelector("sl-drawer").open`);
+      const after = await drawn();
+      assert.deepEqual(
+        [after.modal, after.opener.expanded, after.focused],
+        [false, "false", "Pages [P]"],
+      );
+    });
+
+    test("narrow, the Pages button opens it, and its Close button closes it, focus back on the Pages button", async () => {
+      await load(PAGES.index, { width: 390 });
+      await page.evaluate(`document.querySelector(".pages-opener").focus()`);
+      await page.evaluate(`document.querySelector(".pages-opener").click()`);
+      assert.deepEqual((await drawn()).modal, true);
+      await page.evaluate(`${shadow("sl-drawer")}.querySelector("header button").click()`);
+      await until(page, `!document.querySelector("sl-drawer").open`);
+      const after = await drawn();
+      assert.deepEqual(
+        [after.modal, after.opener.expanded, after.focused],
+        [false, "false", "Pages [P]"],
+      );
+    });
+  });
+
   describe("in every profile the full entry registers", () => {
     let registry: Registry;
     before(async () => {
@@ -356,7 +496,9 @@ describe("the site components", { timeout: 180_000 }, () => {
           clientWidth: number;
         } = await page.evaluate(`(() => {
           const boxes = {};
-          for (const tag of ["sl-page-header", "sl-site-index", "sl-site-nav"]) {
+          // Narrow, the site index is in the closed drawer, and the Pages button is in its place.
+          const tags = ["sl-page-header", ${width} < ${DOCK} ? ".pages-opener" : "sl-site-index", "sl-site-nav"];
+          for (const tag of tags) {
             const box = document.querySelector(tag).getBoundingClientRect();
             boxes[tag] = { left: box.left, right: box.right, height: box.height };
           }
@@ -376,9 +518,9 @@ describe("the site components", { timeout: 180_000 }, () => {
         }
         assert.ok(shown.scrollWidth <= shown.clientWidth, `${name}: no sideways scroll`);
 
-        // The keyboard reaches the site nav's three links, the Theme button, then the site
-        // index's first link; each draws its focus outline. The page header holds nothing to
-        // focus.
+        // The keyboard reaches the site nav's three links, then wide the Theme button and the site
+        // index's first link, and narrow the Pages and the Theme buttons; each draws its focus
+        // outline. The page header holds nothing to focus.
         const focused: { name: string; visible: boolean; outline: string }[] = [];
         for (let i = 0; i < 5; i++) {
           await tab(page);
@@ -388,7 +530,7 @@ describe("the site components", { timeout: 180_000 }, () => {
               while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
               const style = getComputedStyle(el);
               return {
-                name: el.textContent.trim(),
+                name: el.textContent.replace(/\\s+/g, " ").trim(),
                 visible: el.matches(":focus-visible"),
                 outline: style.outlineStyle + " " + parseFloat(style.outlineWidth),
               };
@@ -397,13 +539,74 @@ describe("the site components", { timeout: 180_000 }, () => {
         }
         assert.deepEqual(
           focused.map(({ name: what }) => what),
-          ["Org", "Architecture", "sqlate", "Theme", "The architecture stand-in"],
+          width < DOCK
+            ? ["Org", "Architecture", "sqlate", "Pages [P]", "Theme"]
+            : ["Org", "Architecture", "sqlate", "Theme", "The architecture stand-in"],
           name,
         );
         for (const { name: what, visible, outline } of focused) {
           assert.ok(visible, `${name}: ${what} matches :focus-visible`);
           assert.match(outline, /^solid [1-9]/, `${name}: ${what}'s outline is drawn`);
         }
+      }
+    });
+
+    test("narrow, the drawer opens modally, with no sideways scroll and its focus drawn, light and dark", async () => {
+      for (const run of runs(registry).filter(({ width }) => width < DOCK)) {
+        const name = JSON.stringify(run);
+        const { width, ...profile } = run;
+        await load(PAGES.index, { width }, `?${new URLSearchParams(profile)}`);
+        await page.evaluate(`document.querySelector(".pages-opener").focus()`);
+        await page.evaluate(`document.querySelector(".pages-opener").click()`);
+        await until(page, `document.querySelector("sl-drawer").open`);
+        // The slide in run to its end, the dialog at rest.
+        await page.evaluate(
+          `Promise.all(${shadow("sl-drawer")}.getAnimations().map((a) => a.finished)).then(() => {})`,
+        );
+        // Opened, focus is on the Close button; Tab moves it to the drawer's next control.
+        await tab(page);
+        const shown: {
+          errors: string[];
+          modal: boolean;
+          dialog: { left: number; right: number };
+          widths: number[][];
+          focused: { name: string; inside: boolean; visible: boolean; outline: string };
+        } = await page.evaluate(`(() => {
+          const drawer = document.querySelector("sl-drawer");
+          const dialog = drawer.shadowRoot.querySelector("dialog");
+          const box = dialog.getBoundingClientRect();
+          let el = document.activeElement;
+          while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
+          const style = getComputedStyle(el);
+          return {
+            errors: window.errors,
+            modal: dialog.matches(":modal"),
+            dialog: { left: box.left, right: box.right },
+            // The page, the dialog, and its scrolling body, each as its scroll and client widths.
+            widths: [document.documentElement, dialog, dialog.querySelector(".body")].map(
+              (it) => [it.scrollWidth, it.clientWidth],
+            ),
+            focused: {
+              name: el.textContent.replace(/\\s+/g, " ").trim(),
+              inside: drawer.contains(el) || drawer.shadowRoot.contains(el),
+              visible: el.matches(":focus-visible"),
+              outline: style.outlineStyle + " " + parseFloat(style.outlineWidth),
+            },
+          };
+        })()`);
+        assert.deepEqual(shown.errors, [], name);
+        assert.ok(shown.modal, `${name}: the drawer's dialog is modal`);
+        assert.ok(
+          shown.dialog.left >= 0 && shown.dialog.right <= width,
+          `${name}: the dialog ${JSON.stringify(shown.dialog)} fits the viewport`,
+        );
+        for (const [scroll, client] of shown.widths) {
+          assert.ok(scroll <= client, `${name}: no sideways scroll, ${scroll} past ${client}`);
+        }
+        const { name: what, inside, visible, outline } = shown.focused;
+        assert.ok(inside, `${name}: Tab keeps focus in the drawer, on ${what}`);
+        assert.ok(visible, `${name}: ${what} matches :focus-visible`);
+        assert.match(outline, /^solid [1-9]/, `${name}: ${what}'s outline is drawn`);
       }
     });
   });

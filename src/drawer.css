@@ -1,0 +1,111 @@
+/*
+ * The drawer's layout in a shadow root: drawer.ts adopts this sheet into its root after the
+ * foundation's reset and elements sheets (baseline/reset.css and elements.css), which give the
+ * native dialog its surface, the Close button and the heading their looks and focus ring, and the
+ * ::backdrop its scrim, which the drawer covers whole. It holds the docked aside's frame and the
+ * drawer's: the full viewport, the header both share, the scrolling body, and the slide. It reads
+ * only the foundation's baseline tokens, which a shadow root takes by inheritance from the page's
+ * entry; its one fixed length is the slide's timing. Unlayered, it sits above the adopted layers in
+ * the root.
+ *
+ * Both wrappers are a column of the header over the body: the header, the label's heading and, as
+ * a drawer, the Close button, stays in place while the body below it scrolls. Docked, the aside is
+ * an ordinary block filling the host on the first elevated surface, framed as a container, its
+ * body scrolling when the host is held shorter than its content; in a host of its content's height
+ * the aside is that tall, and the page scrolls it, header and all. As a drawer the dialog covers
+ * the viewport edge to edge, with no frame, since every edge is the viewport's. It slides in from
+ * the inline-start edge and back out unless the reader prefers reduced motion; the slide is a
+ * translate, which moves nothing else.
+ *
+ * From spike-html-apps-components (51d2b92): src/drawer.css.
+ */
+
+:host {
+  display: block;
+  /* The edge the drawer hides past, by the writing direction. */
+  --drawer-from: -100%;
+}
+:host(:dir(rtl)) {
+  --drawer-from: 100%;
+}
+aside {
+  display: flex;
+  flex-direction: column;
+  block-size: 100%;
+  overflow: hidden;
+  border: var(--line-s) solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-1);
+  color: var(--fg);
+}
+dialog {
+  position: fixed;
+  inset: 0;
+  inline-size: 100%;
+  max-inline-size: none;
+  block-size: 100dvh;
+  max-block-size: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  flex-direction: column;
+  overscroll-behavior: contain;
+  translate: var(--drawer-from) 0;
+}
+dialog[open] {
+  display: flex;
+  translate: 0 0;
+}
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-s);
+  padding: var(--space-s);
+  border-block-end: var(--line-s) solid var(--border);
+}
+/* The label is the heading of a contained surface, not of the page: it takes the step the
+   foundation gives an h4, --text-l, one above the body text and the entries' names it heads and
+   two below a page's section h2, so it never competes with the page's h1 or h2. The baseline's
+   heading rule gives it its font, weight, leading, and balance, the same in both modes. */
+h2 {
+  margin: 0;
+  font-size: var(--text-l);
+}
+/* The body scrolls in its padding box and clips there. A control that focus scrolls into view
+   stops at the scroll padding, the body's padding, rather than at the clip edge, so its focus
+   outline, which reaches past its box, stays whole at either edge, as it is at rest. */
+.body {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-s);
+  scroll-padding: var(--space-s);
+}
+/* The label in the Close button's name, which takes no space. */
+.hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* The slide, from past the edge as the dialog opens, and back as it closes, the dialog kept
+   rendered in the top layer until it ends. A mode switch creates or removes a closed dialog, so
+   it never slides. */
+@media (prefers-reduced-motion: no-preference) {
+  dialog {
+    transition:
+      translate 200ms ease-out,
+      overlay 200ms allow-discrete,
+      display 200ms allow-discrete;
+  }
+  @starting-style {
+    dialog[open] {
+      translate: var(--drawer-from) 0;
+    }
+  }
+}

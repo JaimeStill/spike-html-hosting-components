@@ -1,12 +1,14 @@
 // mise run screenshots' description, which spike-html-apps-tooling's spike-html-apps-screenshots
 // reads: the section tree's fixture page in its viewport, wide and narrow, at its top, scrolled to
-// a later section, which the tree marks and the progress bar reaches, and with the keys help
-// dialog open; the architecture fixture site's index page, at its base, with the site nav, the
-// site index, and the page header, wide and narrow, and with its theme menu open; the profile's
+// a later section, which the tree marks and the progress bar reaches, narrow in its sticky bar,
+// and with the keys help dialog open; the architecture fixture site's index page, at its base,
+// with the site nav, the site index in its Pages drawer, and the page header, wide with the drawer
+// docked, narrow with it closed and open by P, and with its theme menu open; the profile's
 // facets, palette, space, and type, at flexoki, regular, and mono; --all's profiles, every palette
 // at the defaults, then compact and sans at flexoki; the profiles each page registers, from the
-// foundation's registry; and the repository served as the browser tier serves it. The files go to a fresh directory under TMPDIR, or to --dir's, never into the
-// repository unless --dir names its gitignored captures/.
+// foundation's registry; and the repository served as the browser tier serves it. The files go
+// to a fresh directory under TMPDIR, or to --dir's, never into the repository unless --dir names
+// its gitignored captures/.
 // Adapted from spike-html-apps-components (51d2b92): scripts/screenshots.config.ts, its pages
 // the section tree's fixture and the architecture fixture site's.
 
@@ -22,10 +24,18 @@ import { served } from "../test/browser/support/served.ts";
 const wide = { width: 1280, height: 800 };
 const narrow = { width: 390, height: 844 };
 
-/** Scrolls the fourth section's heading to the top, at once, and resolves once the tree marks it. */
+/**
+ * Scrolls the fourth section's heading to the top, at once, and resolves once the tree marks it.
+ * The tree's mode follows the viewport by its media query's change event, a frame after the
+ * capture sets the viewport, so the step first waits for the mode the viewport calls for: as the
+ * bar, the root's scroll padding lands the heading below it.
+ */
 const scrolled: Step = async (page) => {
   await page.evaluate(`(async () => {
     await window.ready;
+    const tree = document.querySelector("sl-section-tree");
+    const mode = () => matchMedia("(width < " + tree.dock + ")").matches ? ":state(bar)" : ":state(docked)";
+    while (!tree.matches(mode())) await new Promise((resolve) => requestAnimationFrame(resolve));
     const link = document.querySelectorAll("sl-section-tree a")[3];
     document.getElementById(decodeURIComponent(link.hash.slice(1)))
       .scrollIntoView({ block: "start", behavior: "instant" });
@@ -89,10 +99,41 @@ const theme: Step = async (page) => {
   })()`);
 };
 
+/** Opens the Pages drawer by P, as a reader opens it, and resolves once it has slid in. */
+const pages: Step = async (page) => {
+  await page.evaluate(`window.ready`);
+  for (const type of ["keyDown", "keyUp"]) {
+    await page.cdp("Input.dispatchKeyEvent", {
+      type,
+      key: "p",
+      code: "KeyP",
+      windowsVirtualKeyCode: 80,
+      ...(type === "keyDown" ? { text: "p", unmodifiedText: "p" } : {}),
+    });
+  }
+  await page.evaluate(`(async () => {
+    const drawer = document.querySelector("sl-drawer");
+    while (!drawer.open) await new Promise((resolve) => requestAnimationFrame(resolve));
+    await Promise.all(drawer.shadowRoot.getAnimations().map((a) => a.finished));
+  })()`);
+};
+
 /** The architecture fixture site's index page's states, each its viewport alone. */
 const site: DescribedState[] = [
   { name: "site-wide", caption: "the site components, wide", viewport: wide, full: false },
-  { name: "site-narrow", caption: "the site components, narrow", viewport: narrow, full: false },
+  {
+    name: "site-narrow",
+    caption: "the site components, narrow, the Pages drawer closed",
+    viewport: narrow,
+    full: false,
+  },
+  {
+    name: "site-pages",
+    caption: "the Pages drawer open, narrow",
+    viewport: narrow,
+    full: false,
+    open: pages,
+  },
   {
     name: "site-theme",
     caption: "the site components with the theme menu open",
@@ -102,7 +143,7 @@ const site: DescribedState[] = [
   },
 ];
 
-const pages: DescribedPage[] = [
+const described: DescribedPage[] = [
   {
     name: "section-tree",
     caption: "the section tree",
@@ -127,7 +168,7 @@ const REGISTRY = `window.ready.then(() => {
 })`;
 
 const description: Description = {
-  pages,
+  pages: described,
   facets: [
     { flag: "palette", attribute: "data-palette", default: "flexoki" },
     { flag: "space", attribute: "data-space", default: "regular" },

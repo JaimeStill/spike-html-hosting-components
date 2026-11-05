@@ -1,11 +1,14 @@
 <!doctype html>
 <!-- The architecture fixture site's index page, served at /spike-html-hosting-architecture/ as
      GitHub Pages serves the project site: a page as the SDK's shell and renderer make it, with the
-     three site components. sl-site-nav and the Theme button head the page; sl-site-index slots
-     the site's pages nested by directory, principles/ with an index page and conventions/ without
-     one; and sl-page-header slots the page's front matter, two of its values markup escaped as
-     text. Only this page, principles/plain-web.html, and notes/empty.html exist: the index's other
-     links are listed and never followed.
+     three site components and sl-drawer. sl-site-nav, the Pages button, and the Theme button head
+     the page; sl-site-index slots the site's pages nested by directory, principles/ with an index
+     page and conventions/ without one, inside <sl-drawer label="Pages">, docked beside the article
+     at 48rem and wider and a modal dialog below it, which the Pages button, shown only there,
+     opens, as P does through the keys module's data-keys="p", as the Theme button's T; and
+     sl-page-header slots the page's front matter, two of its values markup escaped as text. Only
+     this page, principles/plain-web.html, and notes/empty.html exist: the index's other links are
+     listed and never followed.
      The page loads the foundation as the sites load it: page-full.css, then register-full.js,
      preferences.js, and keys.js render-blocking, so every built-in profile is registered and the
      stored theme applies before first paint; sl-theme-menu opens on the Theme button or T. The
@@ -40,9 +43,10 @@
     <link rel="stylesheet" href="/deps/@jaimestill/spike-html-apps-foundation/dist/page-full.css" />
     <style>
       /* The fixture's page layout, which is the page's and not the elements': the site nav and the
-         Theme button in a row above, then the site index beside the article at 48rem and wider,
-         and above it below. The mark on the site index's link of this page is the page's paint
-         too. */
+         Pages and Theme buttons in a row above, then the site index's drawer docked beside the
+         article at 48rem, the drawer's default dock, and wider. Below it the drawer is a closed
+         dialog and the Pages button, shown only there and only once the drawer is defined, opens
+         it. The mark on the site index's link of this page is the page's paint too. */
       body {
         display: grid;
         align-content: start;
@@ -69,6 +73,18 @@
         display: grid;
         gap: var(--space-s);
       }
+      body > header > div {
+        display: flex;
+        gap: var(--space-s);
+      }
+      .pages-opener {
+        display: none;
+      }
+      @media (width < 48rem) {
+        body:has(sl-drawer:defined) .pages-opener {
+          display: inline-block;
+        }
+      }
       sl-site-index a[aria-current] {
         font-weight: 600;
       }
@@ -91,11 +107,21 @@
     <script type="module" blocking="render" src="/deps/@jaimestill/spike-html-apps-foundation/dist/preferences.js"></script>
     <script type="module" blocking="render" src="/deps/@jaimestill/spike-html-apps-foundation/dist/keys.js"></script>
     <script type="module">
+      import "/dist/drawer.js";
       import "/dist/page-header.js";
       import "/dist/site-index.js";
       import "/dist/site-nav.js";
 
-      const tags = ["sl-page-header", "sl-site-index", "sl-site-nav"];
+      // The Pages button opens the drawer, which P clicks through the keys module, and says
+      // whether the drawer it controls is open.
+      const drawer = document.querySelector("sl-drawer");
+      const opener = document.querySelector(".pages-opener");
+      opener.addEventListener("click", () => drawer.show());
+      const expanded = () => opener.setAttribute("aria-expanded", String(drawer.open));
+      drawer.addEventListener("open", expanded);
+      drawer.addEventListener("close", expanded);
+
+      const tags = ["sl-drawer", "sl-page-header", "sl-site-index", "sl-site-nav"];
       window.ready = Promise.all(
         tags.map((tag) =>
           customElements.whenDefined(tag).then(() => document.querySelector(tag).updateComplete),
@@ -106,40 +132,54 @@
   <body>
     <header>
       <sl-site-nav></sl-site-nav>
-      <button type="button" commandfor="theme" command="--open" data-keys="t">Theme</button>
+      <div>
+        <button
+          type="button"
+          class="pages-opener"
+          aria-controls="pages"
+          aria-haspopup="dialog"
+          aria-expanded="false"
+          data-keys="p"
+        >
+          Pages <span aria-hidden="true">[<kbd>P</kbd>]</span>
+        </button>
+        <button type="button" commandfor="theme" command="--open" data-keys="t">Theme</button>
+      </div>
     </header>
-    <aside>
-      <sl-site-index label="Site">
-        <ul>
-          <li><a href="/spike-html-hosting-architecture/">The architecture stand-in</a></li>
-          <li>
-            <a href="/spike-html-hosting-architecture/principles/">Principles</a>
-            <ul>
-              <li><a href="/spike-html-hosting-architecture/principles/plain-web.html">Plain web</a></li>
-              <li><a href="/spike-html-hosting-architecture/principles/one-origin.html">One origin, every site</a></li>
-            </ul>
-          </li>
-          <li>
-            <span>Conventions</span>
-            <ul>
-              <li><a href="/spike-html-hosting-architecture/conventions/naming.html">Naming</a></li>
-              <li>
-                <span>Repositories</span>
-                <ul>
-                  <li><a href="/spike-html-hosting-architecture/conventions/repositories/a-repository-whose-page-title-runs-long.html">A repository whose page title runs long enough that the index must wrap it</a></li>
-                </ul>
-              </li>
-            </ul>
-          </li>
-          <li>
-            <span>Notes</span>
-            <ul>
-              <li><a href="/spike-html-hosting-architecture/notes/empty.html">Empty front matter</a></li>
-            </ul>
-          </li>
-        </ul>
-      </sl-site-index>
-    </aside>
+    <div class="site-index">
+      <sl-drawer label="Pages" id="pages">
+        <sl-site-index label="Site">
+          <ul>
+            <li><a href="/spike-html-hosting-architecture/">The architecture stand-in</a></li>
+            <li>
+              <a href="/spike-html-hosting-architecture/principles/">Principles</a>
+              <ul>
+                <li><a href="/spike-html-hosting-architecture/principles/plain-web.html">Plain web</a></li>
+                <li><a href="/spike-html-hosting-architecture/principles/one-origin.html">One origin, every site</a></li>
+              </ul>
+            </li>
+            <li>
+              <span>Conventions</span>
+              <ul>
+                <li><a href="/spike-html-hosting-architecture/conventions/naming.html">Naming</a></li>
+                <li>
+                  <span>Repositories</span>
+                  <ul>
+                    <li><a href="/spike-html-hosting-architecture/conventions/repositories/a-repository-whose-page-title-runs-long.html">A repository whose page title runs long enough that the index must wrap it</a></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li>
+              <span>Notes</span>
+              <ul>
+                <li><a href="/spike-html-hosting-architecture/notes/empty.html">Empty front matter</a></li>
+              </ul>
+            </li>
+          </ul>
+        </sl-site-index>
+      </sl-drawer>
+    </div>
     <main>
       <h1>The architecture stand-in</h1>
       <sl-page-header>

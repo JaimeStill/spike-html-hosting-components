@@ -4,14 +4,16 @@
  * the foundation's baseline tokens, which a shadow root takes by inheritance from the page's entry,
  * and every length is a --space-* step. Unlayered, it sits above the adopted layers in the root.
  *
- * The slotted list is the page's light DOM, laid out by the page's own sheets; the host breaks a
- * long title anywhere rather than widen the page, and the slot's top-level list starts at the
- * nav's edge.
+ * The slotted list is the page's light DOM, laid out by the page's own sheets; the slot's
+ * top-level list starts at the nav's edge. Navigation text never breaks inside a word: the host
+ * sets overflow-wrap and word-break to normal, so a page's own mid-word breaking, inherited from
+ * an ancestor, stops at the index, and a title wraps only between its words.
  */
 
 :host {
   display: block;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 ::slotted(ul) {
   margin: 0;

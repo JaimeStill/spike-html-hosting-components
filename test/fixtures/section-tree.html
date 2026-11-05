@@ -5,9 +5,9 @@
      foundation's full entry, page-full.css, styles it with register-full.js, so every built-in
      profile is linked and registered, and the query's palette, space, type, and scheme set the
      root's data-palette, data-space, data-type, and data-scheme. With no script the page is the
-     list and the sections, every link a plain jump to its heading. One section holds a focusable
-     region that scrolls a wide table sideways. The help dialog is the keys module's, opened by ?
-     or its button.
+     list and the sections, every link a plain jump to its heading, at every width. One section
+     holds a focusable region that scrolls a wide table sideways. The help dialog is the keys
+     module's, opened by ? or its button.
      window.errors collects every error and unhandled rejection the page raises; window.ready
      settles once the tree has rendered. Lit's and the foundation's bare specifiers map onto
      /deps/, where the server answers with the installed packages; the foundation's map onto its
@@ -37,8 +37,10 @@
     <link rel="stylesheet" href="/deps/@jaimestill/spike-html-apps-foundation/dist/page-full.css" />
     <style>
       /* The fixture's page layout, which is the page's and not the element's: the tree beside the
-         article at 48rem and wider, held in view as the article scrolls, and above it below. The
-         mark on the link of the section in view is the page's paint too. */
+         article at the tree's default dock, 70rem, and wider, held in view as the article scrolls.
+         Below it the tree is its sticky bar, above the article: the aside is display: contents
+         there, so the bar's containing block is the body and it sticks the page's whole length.
+         The mark on the link of the section in view is the page's paint too. */
       body {
         display: grid;
         /* One column, which the wide region's table never widens. */
@@ -46,7 +48,12 @@
         gap: var(--space-l);
         padding: var(--space-m);
       }
-      @media (width >= 48rem) {
+      @media (width < 70rem) {
+        aside {
+          display: contents;
+        }
+      }
+      @media (width >= 70rem) {
         body {
           grid-template-columns: minmax(0, 16rem) minmax(0, 1fr);
           align-items: start;
