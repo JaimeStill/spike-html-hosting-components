@@ -82,8 +82,13 @@ GitHub's heading id, with a nested `ul` or `ol` for the `h3`s under it:
   the top of the viewport, and one to the top scrolls the page to 0. Each move counts from the
   stop the last one reached, which stays marked while the page rests where the move left it, even
   a short section whose next heading is already past the reading line, or the last section, which
-  the page can't scroll to the line; once the reader scrolls by other means, the mark follows the
-  reading line again and the next move counts from the section in view. H and L are bound by
+  the page can't scroll to the line. A link followed to a section the tree lists reaches it as a
+  move would: a click or Enter on one of the tree's own links, and any change of the URL's
+  fragment to a listed heading's id, by a link elsewhere on the page, a script, or the history,
+  make that section the held stop, while the link's navigation and scroll, with `:target` and its
+  scroll margin, stay the browser's. A page loaded with a fragment holds no stop. Once the reader
+  scrolls by other means, the mark follows the reading line again and the next move counts from
+  the section in view. H and L are bound by
   `register()` in the foundation's keys module, so its help dialog lists them as "Previous
   section" and "Next section" and its off switch, which covers character keys, turns them off.
   Every arrow key stays the browser's own scrolling, in the page and in any region that scrolls

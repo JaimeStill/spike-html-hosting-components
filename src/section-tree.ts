@@ -103,10 +103,15 @@ const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
  * scrolls its heading to the top of the viewport, and one to the top scrolls the root to 0. The
  * stop a move reaches is its target: marked while the page rests where the move left it, whatever
  * the reading line would mark there, as at a section shorter than the line's distance from the
- * top or one the page can't scroll to the line, and the stop the next move counts from. Once the
- * reader scrolls by other means, the wheel, the keyboard, a link, or the scrollbar, the mark
- * follows the reading line again and the next move counts from the section in view. H and L
- * are bound by register() in the foundation's keys module, so its help dialog lists them and its
+ * top or one the page can't scroll to the line, and the stop the next move counts from. A link
+ * followed to a section the tree lists reaches it as a move would: one of the tree's own, clicked
+ * or entered, and any change of the URL's fragment to a listed heading's id, by a link elsewhere
+ * on the page, a script, or the history, make that section the held stop, while the link's
+ * navigation and its scroll, to the :target's scroll margin, stay the browser's. A page loaded
+ * with a fragment holds no stop: its section in view is the reading line's. Once the reader
+ * scrolls by other means, the wheel, the keyboard, a link to no listed section, or the scrollbar,
+ * the mark follows the reading line again and the next move counts from the section in view. H
+ * and L are bound by register() in the foundation's keys module, so its help dialog lists them and its
  * off switch, which covers character keys, turns them off. Every arrow key stays the browser's
  * own scrolling, in the page and in any region that scrolls sideways: the keys module cancels each
  * key a binding matches, so the element binds none. The Previous and Next buttons, with the
@@ -193,6 +198,10 @@ export class SectionTree extends LitElement {
     ];
     document.addEventListener("scroll", this.#scrolled, { passive: true });
     document.addEventListener("scrollend", this.#settle);
+    // A followed link holds its section: a slotted link's click, which Enter on it fires too, and
+    // any change of the fragment.
+    this.addEventListener("click", this.#clicked);
+    addEventListener("hashchange", this.#hashed);
     // aria-keyshortcuts follows the keys setting. The keys module keeps it current on data-keys
     // elements alone, which it finds in the document and never in a shadow root, so the element
     // reads the setting as it changes: in the help dialog's form, whose own listener sits below
@@ -210,6 +219,8 @@ export class SectionTree extends LitElement {
     this.#unregister = [];
     document.removeEventListener("scroll", this.#scrolled);
     document.removeEventListener("scrollend", this.#settle);
+    this.removeEventListener("click", this.#clicked);
+    removeEventListener("hashchange", this.#hashed);
     document.removeEventListener("change", this.#refresh);
     removeEventListener("storage", this.#refresh);
     this.#observer?.disconnect();
@@ -379,6 +390,43 @@ export class SectionTree extends LitElement {
     }
     this.#mark(this.#atLine());
   };
+
+  /**
+   * A click in the tree, or Enter on a link, which fires one: a plain click on a slotted link to a
+   * listed section holds that section once the browser's navigation, which follows the click's
+   * dispatch, has scrolled to it, unless the page cancelled it. A link to the fragment already in
+   * the URL changes no fragment, so no hashchange holds it.
+   */
+  #clicked = (event: MouseEvent): void => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      return;
+    }
+    const link = event.target instanceof Element ? event.target.closest("a") : null;
+    const index = this.#sections.findIndex((section) => section.link === link);
+    if (index === -1) return;
+    setTimeout(() => {
+      if (!event.defaultPrevented) this.#reach(index);
+    });
+  };
+
+  /** A change of the fragment, by any link, a script, or the history: one a section names holds it. */
+  #hashed = (): void => {
+    const heading = document.getElementById(fragment(location.hash));
+    const index = this.#sections.findIndex((section) => section.heading === heading);
+    if (index !== -1) this.#reach(index);
+  };
+
+  /**
+   * A section a followed link scrolls to, held as a move's target: its rest where the browser's
+   * fragment scroll lands it, as a move's does, its scroll the browser's, smooth under the page's
+   * scroll-behavior or already landed.
+   */
+  #reach(index: number): void {
+    this.#held = true;
+    this.#mark(index);
+    this.#rest = this.#destination(index);
+    this.#moving = this.#away();
+  }
 
   /**
    * Where a move to `index` rests the root's scroll: 0 for the top; for a section, its heading at

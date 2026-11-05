@@ -15,7 +15,10 @@
 // distance from the top, L and H visit every stop in order, each move counting from the stop the
 // last one reached, at 1280 and 390 px, instant and smooth, and with a smooth move's scroll cut
 // short by the next; the mark follows a reader's scroll as it happens, and after it the next move
-// counts from the section in view.
+// counts from the section in view; and a link followed to a listed section holds it as a move
+// would, a tree link clicked or entered at 1280 px, the fragment already in the URL included, and
+// a fragment changed by a script or a link elsewhere on the page at 1280 and 390 px, where the
+// tree's links are hidden in the bar.
 
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
@@ -56,6 +59,7 @@ const KEYS = {
   ArrowRight: { key: "ArrowRight", code: "ArrowRight", windowsVirtualKeyCode: 39 },
   ArrowDown: { key: "ArrowDown", code: "ArrowDown", windowsVirtualKeyCode: 40 },
   Tab: { key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 },
+  Enter: { key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, text: "\r" },
   "?": { key: "?", code: "Slash", windowsVirtualKeyCode: 191, modifiers: 8, text: "?" },
 };
 
@@ -738,17 +742,125 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
           { index: wheeled + 1, marked: 1 },
           "L counts from it",
         );
-        // A link, back up the page, to a short section whose next heading is past the line.
-        await page.evaluate(`location.hash = ${LINKS}[1].hash`);
-        await until(page, `Math.abs(${HEADINGS}[1].getBoundingClientRect().top) < 200`);
+        // A scrollbar's drag, as a script's scroll, back up the page into the first section.
+        await page.evaluate(`scrollTo({ top: ${await rest(0)} + 10, behavior: "instant" })`);
         await still(page);
         await page.evaluate(SETTLED);
-        const linked = await atLine();
-        assert.ok(linked >= 1 && linked < wheeled, `the link took the line to ${linked}`);
-        assert.deepEqual(await current(page), { index: linked, marked: 1 }, "the mark follows");
-        await move("h", linked - 1);
-        assert.deepEqual(await current(page), { index: linked - 1, marked: 1 }, "H counts from it");
+        const dragged = await atLine();
+        assert.ok(dragged >= 1 && dragged < wheeled, `the scroll took the line to ${dragged}`);
+        assert.deepEqual(await current(page), { index: dragged, marked: 1 }, "the mark follows");
+        await move("h", dragged - 1);
+        assert.deepEqual(
+          await current(page),
+          { index: dragged - 1, marked: 1 },
+          "H counts from it",
+        );
       });
+
+      for (const reduce of [true, false]) {
+        const named = `at ${width}px${reduce ? "" : ", scrolling smoothly"}`;
+
+        test(`a fragment changed to a listed section holds it, as a move to it would, ${named}`, async () => {
+          await short({ width, reduce });
+          const count: number = await page.evaluate(`${LINKS}.length`);
+          // A short section, whose next heading is past the line once it is at the top.
+          await follow(`location.hash = ${LINKS}[2].hash`, 2);
+          assert.ok((await atLine()) > 2, "the reading line marks a later section");
+          assert.deepEqual(await current(page), { index: 2, marked: 1 }, "the fragment's section");
+          await move("l", 3);
+          assert.deepEqual(await current(page), { index: 3, marked: 1 }, "L counts from it");
+          // The last section, which the page can't scroll to the line.
+          await follow(`location.hash = ${LINKS}[${count - 1}].hash`, count - 1);
+          assert.ok((await atLine()) < count - 1, "the reading line marks an earlier section");
+          assert.deepEqual(
+            await current(page),
+            { index: count - 1, marked: 1 },
+            "the fragment's section",
+          );
+          await move("l", -1);
+          assert.deepEqual(await current(page), { index: -1, marked: 0 }, "L counts from it");
+          // A link elsewhere on the page, as the history's step back would take it.
+          await follow(
+            `(() => {
+              const a = document.createElement("a");
+              a.href = ${LINKS}[1].hash;
+              document.querySelector("main").append(a);
+              a.click();
+            })()`,
+            1,
+          );
+          assert.deepEqual(await current(page), { index: 1, marked: 1 }, "the link's section");
+          await move("h", 0);
+          assert.deepEqual(await current(page), { index: 0, marked: 1 }, "H counts from it");
+        });
+      }
+    }
+
+    for (const reduce of [true, false]) {
+      const named = `at 1280px${reduce ? "" : ", scrolling smoothly"}`;
+
+      test(`a tree link clicked or entered holds its section, as a move to it would, ${named}`, async () => {
+        await short({ width: 1280, reduce });
+        const count: number = await page.evaluate(`${LINKS}.length`);
+        // A short section, whose next heading is past the line once it is at the top.
+        await follow(click(2), 2);
+        assert.ok((await atLine()) > 2, "the reading line marks a later section");
+        assert.deepEqual(await current(page), { index: 2, marked: 1 }, "the link's section");
+        await move("l", 3);
+        assert.deepEqual(await current(page), { index: 3, marked: 1 }, "L counts from it");
+        // The last section, which the page can't scroll to the line.
+        await follow(click(count - 1), count - 1);
+        assert.ok((await atLine()) < count - 1, "the reading line marks an earlier section");
+        assert.deepEqual(
+          await current(page),
+          { index: count - 1, marked: 1 },
+          "the link's section",
+        );
+        await move("h", count - 2);
+        assert.deepEqual(await current(page), { index: count - 2, marked: 1 }, "H counts from it");
+        // Enter on a focused link.
+        await follow(async () => {
+          await page.evaluate(`${LINKS}[1].focus()`);
+          await press(page, "Enter");
+        }, 1);
+        assert.deepEqual(await current(page), { index: 1, marked: 1 }, "the entered section");
+        await move("l", 2);
+        // The link to the fragment the URL already holds, which changes no fragment, after a
+        // scroll away from it.
+        await page.evaluate(`scrollBy({ top: 300, behavior: "instant" })`);
+        await still(page);
+        await page.evaluate(SETTLED);
+        assert.notEqual((await current(page)).index, 1, "the scroll released the hold");
+        await follow(click(1), 1);
+        assert.deepEqual(await current(page), { index: 1, marked: 1 }, "the link's section again");
+        await move("h", 0);
+        assert.deepEqual(await current(page), { index: 0, marked: 1 }, "H counts from it");
+      });
+    }
+
+    /** A primary click, by the mouse, at the middle of tree link `index`. */
+    const click = (index: number) => async () => {
+      const { x, y }: { x: number; y: number } = await page.evaluate(`(() => {
+        const box = ${LINKS}[${index}].getBoundingClientRect();
+        return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+      })()`);
+      for (const type of ["mousePressed", "mouseReleased"]) {
+        await page.cdp("Input.dispatchMouseEvent", { type, x, y, button: "left", clickCount: 1 });
+      }
+    };
+
+    /**
+     * Follows a link to stop `index` by `action`, a page expression or a step of the test's own,
+     * then waits for the fragment to name its heading and the page to rest where the browser's
+     * fragment scroll, to the :target's scroll margin, lands it, and a frame past it.
+     */
+    async function follow(action: string | (() => Promise<void>), index: number): Promise<void> {
+      if (typeof action === "string") await page.evaluate(action);
+      else await action();
+      await until(page, `location.hash === ${LINKS}[${index}].hash`);
+      await until(page, `Math.abs(scrollY - ${await rest(index)}) <= 1`);
+      await still(page);
+      await page.evaluate(SETTLED);
     }
   });
 
