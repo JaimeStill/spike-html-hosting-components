@@ -1,0 +1,498 @@
+// sl-page-header, sl-site-index, and sl-site-nav from this repository's dist/, on the fixture
+// sites under test/fixtures/sites/, each served at its own base on one origin, through their
+// public seams alone. With no script the front matter and the site index render, and the page
+// reads without the site nav; the header slots the front matter as a grid of terms beside their
+// values, in source order and as text, and an empty or absent dl renders nothing; the index marks
+// the page on screen, a directory labeled by its index page or its name; the nav lists the
+// components' sites and marks the current one by the path's first segment; every component
+// renders in every profile the foundation's full entry registers, light and dark, at 1280 and
+// 390 px, with no sideways scroll and its focus drawn; and the theme saved through the menu on
+// one site applies before first paint on the other, a palette the other doesn't register falling
+// back to its default and staying stored.
+
+import assert from "node:assert/strict";
+import { after, before, describe, test } from "node:test";
+
+import { launch, SETTLED } from "@jaimestill/spike-html-apps-tooling/browser.js";
+import type { Browser, Page } from "@jaimestill/spike-html-apps-tooling/browser.js";
+import { serve } from "@jaimestill/spike-html-apps-tooling/server.js";
+import type { Server } from "@jaimestill/spike-html-apps-tooling/server.js";
+
+import { registry as read, resize, runs, type Registry } from "./support/profiles.ts";
+import { served } from "./support/served.ts";
+
+/** The fixture sites' bases, as GitHub Pages serves each project site. */
+const ARCHITECTURE = "/spike-html-hosting-architecture/";
+const SQLATE = "/spike-html-hosting-sqlate/";
+
+/** The architecture site's pages the cases load. */
+const PAGES = {
+  index: ARCHITECTURE,
+  plain: `${ARCHITECTURE}principles/plain-web.html`,
+  empty: `${ARCHITECTURE}notes/empty.html`,
+};
+
+/** The front matter the index page's header holds, in source order, as its text reads. */
+const FRONT_MATTER = [
+  ["title", "The architecture stand-in"],
+  ["status", "draft"],
+  ["summary", `<script>alert("front matter")</script> is text, never markup`],
+  ["owner", "Research & Standards"],
+  [
+    "a-front-matter-key-long-enough-to-wrap",
+    "https://jaimestill.github.io/spike-html-hosting-architecture/a/path/long/enough/that/it/must/wrap/at/narrow/widths.html",
+  ],
+];
+
+/** The sites the nav lists, in order: the link's text and its href as written. */
+const SITES = [
+  ["Org", "/spike-html-hosting/"],
+  ["Architecture", "/spike-html-hosting-architecture/"],
+  ["sqlate", "/spike-html-hosting-sqlate/"],
+];
+
+/** The localStorage key the foundation's preferences keep the theme under. */
+const KEY = "spike-html-apps-foundation.preferences";
+
+/** A component's shadow root, in a page expression. */
+const shadow = (tag: string) => `document.querySelector("${tag}").shadowRoot`;
+
+/** The header's terms and values, in source order, in a page expression. */
+const PAIRS = `[...document.querySelectorAll("sl-page-header dl > :is(dt, dd)")]`;
+
+/** The site index's links, in a page expression. */
+const INDEX_LINKS = `[...document.querySelectorAll("sl-site-index a")]`;
+
+/** The site nav's links, in a page expression. */
+const NAV_LINKS = `[...${shadow("sl-site-nav")}.querySelectorAll("a")]`;
+
+/** The Tab key, as the protocol's key events give it. */
+const TAB = { key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 };
+
+/** Tab pressed and released on the focused element. */
+async function tab(page: Page): Promise<void> {
+  await page.cdp("Input.dispatchKeyEvent", { type: "rawKeyDown", ...TAB });
+  await page.cdp("Input.dispatchKeyEvent", { type: "keyUp", ...TAB });
+}
+
+/**
+ * The first frame's record, which a script ahead of every document takes in its first
+ * requestAnimationFrame callback, run in the rendering update that paints the first frame, after
+ * the render-blocking modules: the root's data attributes, the body's computed background,
+ * whether any paint has come before it, and its time since the navigation began.
+ */
+const RECORDER = `window.frame = null;
+  requestAnimationFrame(() => {
+    window.frame = {
+      dataset: { ...document.documentElement.dataset },
+      background: document.body ? getComputedStyle(document.body).backgroundColor : null,
+      painted: performance.getEntriesByType("paint").length > 0,
+      time: performance.now(),
+    };
+  });`;
+
+/** The background a palette and scheme give a probe on the loaded page, its --bg resolved. */
+const background = (page: Page, palette: string, scheme: string): Promise<string> =>
+  page.evaluate(`(() => {
+    const probe = document.createElement("div");
+    probe.dataset.palette = ${JSON.stringify(palette)};
+    probe.dataset.scheme = ${JSON.stringify(scheme)};
+    probe.style.backgroundColor = "var(--bg)";
+    document.body.append(probe);
+    const value = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return value;
+  })()`);
+
+describe("the site components", { timeout: 180_000 }, () => {
+  let server: Server;
+  let browser: Browser;
+  let page: Page;
+  before(async () => {
+    server = await serve(served);
+    browser = await launch();
+    page = await browser.open("about:blank");
+    await page.cdp("Emulation.setFocusEmulationEnabled", { enabled: true });
+  });
+  after(async () => {
+    await page?.close();
+    await browser?.close();
+    await server?.stop();
+  });
+
+  /** Loads the page at the viewport's width, its storage cleared, rendered. */
+  async function load(path: string, { width = 1280 }: { width?: number } = {}, query = "") {
+    await resize(page, width);
+    await page.goto(`${server.origin}${path}${query}`);
+    await page.evaluate(`localStorage.clear()`);
+    await page.goto(`${server.origin}${path}${query}`);
+    await page.evaluate(`window.ready.then(() => ${SETTLED})`);
+  }
+
+  /** Clicks the element the expression names and resolves once the page it opens has loaded and
+   * rendered. */
+  async function follow(expression: string): Promise<void> {
+    const loaded = new Promise((resolve) => page.on("Page.loadEventFired", resolve));
+    await page.evaluate(`${expression}.click()`);
+    await loaded;
+    await page.evaluate(`window.ready.then(() => ${SETTLED})`);
+  }
+
+  describe("with no script", () => {
+    before(async () => {
+      await page.cdp("Emulation.setScriptExecutionDisabled", { value: true });
+      await resize(page, 1280);
+      await page.goto(`${server.origin}${PAGES.index}`);
+    });
+    after(() => page.cdp("Emulation.setScriptExecutionDisabled", { value: false }));
+
+    test("the front matter renders as the page's dl, in source order and as text", async () => {
+      const shown: { defined: boolean; pairs: string[][]; seen: boolean[]; markup: number } =
+        await page.evaluate(`(() => {
+          const items = ${PAIRS};
+          const pairs = [];
+          for (let i = 0; i < items.length; i += 2) {
+            pairs.push([items[i].textContent, items[i + 1].textContent]);
+          }
+          return {
+            defined: customElements.get("sl-page-header") !== undefined,
+            pairs,
+            seen: items.map((el) => el.getBoundingClientRect().height > 0),
+            markup: document.querySelectorAll("sl-page-header dl *:not(dt, dd)").length,
+          };
+        })()`);
+      assert.equal(shown.defined, false, "no script defined the element");
+      assert.deepEqual(shown.pairs, FRONT_MATTER);
+      assert.ok(shown.seen.every(Boolean), "every term and value is shown");
+      assert.equal(shown.markup, 0, "no value parsed as markup");
+    });
+
+    test("the site index renders, every link and directory label shown", async () => {
+      const shown: { text: string; seen: boolean }[] = await page.evaluate(
+        `[...document.querySelectorAll("sl-site-index li > :is(a, span)")].map((el) => {
+          const box = el.getBoundingClientRect();
+          return { text: el.textContent.trim(), seen: box.width > 0 && box.height > 0 };
+        })`,
+      );
+      assert.ok(shown.length >= 10, `the index holds ${shown.length} entries`);
+      for (const { text, seen } of shown) assert.ok(seen, `${text} is shown`);
+    });
+
+    test("the site nav renders nothing, and the page reads without it", async () => {
+      const shown: { nav: number; main: boolean } = await page.evaluate(`({
+        nav: document.querySelector("sl-site-nav").getBoundingClientRect().height,
+        main: document.querySelector("main p").getBoundingClientRect().height > 0,
+      })`);
+      assert.deepEqual(shown, { nav: 0, main: true });
+    });
+  });
+
+  describe("sl-page-header", () => {
+    test("slots the dl as a grid, each term beside its value, in source order and as text", async () => {
+      await load(PAGES.index);
+      const shown: {
+        errors: string[];
+        slotted: string[];
+        display: string;
+        pairs: string[][];
+        rows: { level: boolean; beside: boolean }[];
+      } = await page.evaluate(`(() => {
+        const items = ${PAIRS};
+        const pairs = [];
+        const rows = [];
+        for (let i = 0; i < items.length; i += 2) {
+          pairs.push([items[i].textContent, items[i + 1].textContent]);
+          const term = items[i].getBoundingClientRect();
+          const value = items[i + 1].getBoundingClientRect();
+          // The items align on their baselines, so a term's box, its margin aside, is level with
+          // its value's.
+          rows.push({
+            level: Math.abs(term.top - value.top) <= 1,
+            beside: value.left >= term.right,
+          });
+        }
+        return {
+          errors: window.errors,
+          slotted: ${shadow("sl-page-header")}.querySelector("slot").assignedElements().map((el) => el.localName),
+          display: getComputedStyle(document.querySelector("sl-page-header dl")).display,
+          pairs,
+          rows,
+        };
+      })()`);
+      assert.deepEqual(shown.errors, []);
+      assert.deepEqual(shown.slotted, ["dl"]);
+      assert.equal(shown.display, "grid");
+      assert.deepEqual(shown.pairs, FRONT_MATTER);
+      for (const [i, row] of shown.rows.entries()) {
+        assert.deepEqual(row, { level: true, beside: true }, FRONT_MATTER[i][0]);
+      }
+    });
+
+    test("an empty dl and an absent one render nothing", async () => {
+      for (const path of [PAGES.empty, PAGES.plain]) {
+        await load(path);
+        const shown: { errors: string[]; height: number; terms: number } = await page.evaluate(`({
+          errors: window.errors,
+          height: document.querySelector("sl-page-header").getBoundingClientRect().height,
+          terms: document.querySelectorAll("sl-page-header dt").length,
+        })`);
+        assert.deepEqual(shown, { errors: [], height: 0, terms: 0 }, path);
+      }
+    });
+  });
+
+  describe("sl-site-index", () => {
+    /** The index's nav label and slotted elements, and its marked links' hrefs and texts. */
+    const marked = (): Promise<{ label: string; slotted: string[]; current: string[][] }> =>
+      page.evaluate(`({
+        label: ${shadow("sl-site-index")}.querySelector("nav").getAttribute("aria-label"),
+        slotted: ${shadow("sl-site-index")}.querySelector("nav slot").assignedElements().map((el) => el.localName),
+        current: ${INDEX_LINKS}.filter((a) => a.hasAttribute("aria-current"))
+          .map((a) => [a.getAttribute("aria-current"), a.getAttribute("href"), a.textContent]),
+      })`);
+
+    test("the shadow root holds the nav landmark around the slot, and marks the page on screen", async () => {
+      await load(PAGES.index);
+      assert.deepEqual(await marked(), {
+        label: "Site",
+        slotted: ["ul"],
+        current: [["page", ARCHITECTURE, "The architecture stand-in"]],
+      });
+      await load(`${ARCHITECTURE}index.html`);
+      assert.deepEqual(
+        (await marked()).current,
+        [["page", ARCHITECTURE, "The architecture stand-in"]],
+        "index.html is the directory's page",
+      );
+      await load(PAGES.plain);
+      assert.deepEqual((await marked()).current, [["page", PAGES.plain, "Plain web"]]);
+      await load(PAGES.empty);
+      assert.deepEqual((await marked()).current, [["page", PAGES.empty, "Empty front matter"]]);
+    });
+
+    test("a directory is labeled by its index page's link, or by its name", async () => {
+      await load(PAGES.index);
+      const directories: { label: string; tag: string; href: string | null }[] =
+        await page.evaluate(`[...document.querySelectorAll("sl-site-index li:has(> ul)")].map((li) => {
+          const label = li.firstElementChild;
+          return { label: label.textContent, tag: label.localName, href: label.getAttribute("href") };
+        })`);
+      assert.deepEqual(directories, [
+        { label: "Principles", tag: "a", href: `${ARCHITECTURE}principles/` },
+        { label: "Conventions", tag: "span", href: null },
+        { label: "Repositories", tag: "span", href: null },
+        { label: "Notes", tag: "span", href: null },
+      ]);
+    });
+
+    test("a renderer's mark on another link is removed, and a changed list is marked again", async () => {
+      await load(PAGES.index);
+      await page.evaluate(`(() => {
+        const list = document.querySelector("sl-site-index ul").cloneNode(true);
+        list.querySelector('a[href$="naming.html"]').setAttribute("aria-current", "page");
+        document.querySelector("sl-site-index ul").replaceWith(list);
+      })()`);
+      await page.evaluate(SETTLED);
+      assert.deepEqual((await marked()).current, [
+        ["page", ARCHITECTURE, "The architecture stand-in"],
+      ]);
+    });
+  });
+
+  describe("sl-site-nav", () => {
+    /** The nav's label, its links as text and href, and the current one's text. */
+    const listed = (): Promise<{ label: string; links: string[][]; current: string[] }> =>
+      page.evaluate(`({
+        label: ${shadow("sl-site-nav")}.querySelector("nav").getAttribute("aria-label"),
+        links: ${NAV_LINKS}.map((a) => [a.textContent, a.getAttribute("href")]),
+        current: ${NAV_LINKS}.filter((a) => a.getAttribute("aria-current") === "page").map((a) => a.textContent),
+      })`);
+
+    test("lists the components' sites, root-relative, in its shadow nav, the current one marked", async () => {
+      await load(PAGES.index);
+      assert.deepEqual(await listed(), { label: "Sites", links: SITES, current: ["Architecture"] });
+      await load(PAGES.plain);
+      assert.deepEqual((await listed()).current, ["Architecture"], "a nested page's site");
+      await load(SQLATE);
+      assert.deepEqual(await listed(), { label: "Sites", links: SITES, current: ["sqlate"] });
+      assert.deepEqual(await page.evaluate("window.errors"), []);
+    });
+
+    test("a path on no listed site marks none", async () => {
+      await load("/test/fixtures/section-tree.html");
+      await page.evaluate(`(async () => {
+        await import("/dist/site-nav.js");
+        document.body.append(document.createElement("sl-site-nav"));
+        await document.querySelector("sl-site-nav").updateComplete;
+      })()`);
+      const { links, current } = await listed();
+      assert.deepEqual({ links, current }, { links: SITES, current: [] });
+    });
+  });
+
+  describe("in every profile the full entry registers", () => {
+    let registry: Registry;
+    before(async () => {
+      await load(PAGES.index);
+      registry = await read(page);
+    });
+
+    test("registers every palette, space, and type the cases run", () => {
+      assert.ok(registry.color.length >= 4, JSON.stringify(registry));
+      assert.ok(registry.space.length >= 2, JSON.stringify(registry));
+      assert.ok(registry.type.length >= 2, JSON.stringify(registry));
+    });
+
+    test("each renders with no sideways scroll and its focus drawn, light and dark, wide and narrow", async () => {
+      for (const run of runs(registry)) {
+        const name = JSON.stringify(run);
+        const { width, ...profile } = run;
+        await load(PAGES.index, { width }, `?${new URLSearchParams(profile)}`);
+        const shown: {
+          errors: string[];
+          dataset: Record<string, string>;
+          boxes: Record<string, { left: number; right: number; height: number }>;
+          scrollWidth: number;
+          clientWidth: number;
+        } = await page.evaluate(`(() => {
+          const boxes = {};
+          for (const tag of ["sl-page-header", "sl-site-index", "sl-site-nav"]) {
+            const box = document.querySelector(tag).getBoundingClientRect();
+            boxes[tag] = { left: box.left, right: box.right, height: box.height };
+          }
+          return {
+            errors: window.errors,
+            dataset: { ...document.documentElement.dataset },
+            boxes,
+            scrollWidth: document.documentElement.scrollWidth,
+            clientWidth: document.documentElement.clientWidth,
+          };
+        })()`);
+        assert.deepEqual(shown.errors, [], name);
+        assert.deepEqual(shown.dataset, profile, name);
+        for (const [tag, box] of Object.entries(shown.boxes)) {
+          assert.ok(box.height > 0 && box.left >= 0, `${name}: ${tag} renders`);
+          assert.ok(box.right <= shown.clientWidth, `${name}: ${tag} fits the viewport`);
+        }
+        assert.ok(shown.scrollWidth <= shown.clientWidth, `${name}: no sideways scroll`);
+
+        // The keyboard reaches the site nav's three links, the Theme button, then the site
+        // index's first link; each draws its focus outline. The page header holds nothing to
+        // focus.
+        const focused: { name: string; visible: boolean; outline: string }[] = [];
+        for (let i = 0; i < 5; i++) {
+          await tab(page);
+          focused.push(
+            await page.evaluate(`(() => {
+              let el = document.activeElement;
+              while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
+              const style = getComputedStyle(el);
+              return {
+                name: el.textContent.trim(),
+                visible: el.matches(":focus-visible"),
+                outline: style.outlineStyle + " " + parseFloat(style.outlineWidth),
+              };
+            })()`),
+          );
+        }
+        assert.deepEqual(
+          focused.map(({ name: what }) => what),
+          ["Org", "Architecture", "sqlate", "Theme", "The architecture stand-in"],
+          name,
+        );
+        for (const { name: what, visible, outline } of focused) {
+          assert.ok(visible, `${name}: ${what} matches :focus-visible`);
+          assert.match(outline, /^solid [1-9]/, `${name}: ${what}'s outline is drawn`);
+        }
+      }
+    });
+  });
+
+  describe("the theme across sites", () => {
+    /** How long the crossing holds each of the foundation's modules, in ms. */
+    const DELAY = 200;
+
+    before(async () => {
+      await page.cdp("Page.addScriptToEvaluateOnNewDocument", { source: RECORDER });
+      // Each request Fetch pauses, only while a crossing has it enabled, continues DELAY ms on.
+      page.on("Fetch.requestPaused", ({ requestId }: { requestId: string }) => {
+        setTimeout(() => page.cdp("Fetch.continueRequest", { requestId }).catch(() => {}), DELAY);
+      });
+    });
+
+    /** Opens the theme menu, checks the palette and the scheme, and saves them. */
+    async function choose(palette: string, scheme: string): Promise<void> {
+      await page.evaluate(`(async () => {
+        document.querySelector('[commandfor="theme"]').click();
+        let dialog;
+        while (!(dialog = document.querySelector("sl-theme-menu dialog[open]"))) {
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+        }
+        dialog.querySelector('[data-section="color"] input[value=${JSON.stringify(palette)}]').click();
+        dialog.querySelector('[data-section="scheme"] input[value=${JSON.stringify(scheme)}]').click();
+        dialog.querySelector('[data-action="save"]').click();
+      })()`);
+    }
+
+    /** The stored theme, parsed. */
+    const stored = (): Promise<Record<string, string> | null> =>
+      page.evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(KEY)}))`);
+
+    /** The site nav's link to a site, in a page expression. */
+    const link = (base: string) => `${shadow("sl-site-nav")}.querySelector('a[href="${base}"]')`;
+
+    /**
+     * Follows the site nav's link to the site, every module of the foundation's held DELAY ms, and
+     * resolves to the new page's first frame: were the modules not render-blocking, the first frame
+     * would come before them, the stored theme not yet applied. The frame's time shows it waited.
+     */
+    async function cross(base: string): Promise<Record<string, unknown>> {
+      await page.cdp("Fetch.enable", {
+        patterns: [{ urlPattern: "*/spike-html-apps-foundation/dist/*.js" }],
+      });
+      try {
+        await follow(link(base));
+      } finally {
+        await page.cdp("Fetch.disable");
+      }
+      assert.equal(await page.evaluate("location.pathname"), base);
+      const { time, ...frame } = await page.evaluate("window.frame");
+      assert.ok(time >= DELAY, `the first frame, at ${time} ms, waited on the held modules`);
+      return frame;
+    }
+
+    test("a theme saved on one site applies before first paint on the other", async () => {
+      await load(ARCHITECTURE);
+      await choose("primer", "dark");
+      const saved = { scheme: "dark", color: "primer", space: "regular", type: "mono" };
+      assert.deepEqual(await stored(), saved);
+      const frame = await cross(SQLATE);
+      assert.deepEqual(frame, {
+        dataset: { palette: "primer", space: "regular", type: "mono", scheme: "dark" },
+        background: await background(page, "primer", "dark"),
+        painted: false,
+      });
+      assert.notEqual(frame.background, await background(page, "flexoki", "dark"));
+      assert.deepEqual(await page.evaluate("window.errors"), []);
+    });
+
+    test("a palette the other site doesn't register falls back to its default and stays stored", async () => {
+      await load(ARCHITECTURE);
+      await choose("catppuccin", "dark");
+      const saved = { scheme: "dark", color: "catppuccin", space: "regular", type: "mono" };
+      assert.deepEqual(await cross(SQLATE), {
+        dataset: { space: "regular", type: "mono", scheme: "dark" },
+        background: await background(page, "flexoki", "dark"),
+        painted: false,
+      });
+      assert.deepEqual(await stored(), saved, "the unregistered palette stays stored");
+      // Back on the site that registers it, the stored palette applies on the first frame.
+      assert.deepEqual(await cross(ARCHITECTURE), {
+        dataset: { palette: "catppuccin", space: "regular", type: "mono", scheme: "dark" },
+        background: await background(page, "catppuccin", "dark"),
+        painted: false,
+      });
+      assert.deepEqual(await page.evaluate("window.errors"), []);
+    });
+  });
+});

@@ -1,0 +1,29 @@
+/*
+ * The site nav's layout in a shadow root: site-nav.ts adopts this sheet into its root after the
+ * foundation's reset and elements sheets (baseline/reset.css and elements.css). It reads only the
+ * foundation's baseline tokens, which a shadow root takes by inheritance from the page's entry, and
+ * every length is a --space-* step. Unlayered, it sits above the adopted layers in the root.
+ *
+ * The list is a row of links, wrapping onto a second line rather than widen the page; the links
+ * are the shadow root's own, so the current site's mark is styled here, its text the strongest
+ * and its weight the terms'. Focus keeps the elements sheet's outline.
+ */
+
+:host {
+  display: block;
+}
+ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs) var(--space-s);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+li {
+  margin: 0;
+}
+a[aria-current="page"] {
+  color: var(--fg);
+  font-weight: 600;
+}
