@@ -1,0 +1,67 @@
+/*
+ * The section tree's layout in a shadow root: section-tree.ts adopts this sheet into its root after
+ * the foundation's reset and elements sheets (baseline/reset.css and elements.css). It reads only
+ * the foundation's baseline tokens, which a shadow root takes by inheritance from the page's entry,
+ * and every length is a --space-* step. Unlayered, it sits above the adopted layers in the root.
+ *
+ * The tree is a column: the reading progress, the slotted list, and the Previous and Next buttons.
+ * The slotted list is the page's light DOM, laid out by the page's own sheets; the host breaks a
+ * long link anywhere rather than widen the page, and the slot's top-level list starts at the
+ * column's edge.
+ */
+
+:host {
+  display: block;
+  overflow-wrap: anywhere;
+}
+nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+::slotted(:is(ul, ol)) {
+  margin: 0;
+}
+.moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+}
+.hint {
+  white-space: nowrap;
+}
+
+/*
+ * The reading progress: a track and a bar the page's scroll grows from the inline start, by a
+ * scroll timeline on the root scroller, with no script. In an engine without scroll timelines the
+ * whole indicator is absent. Reduced motion leaves it shown: it moves only as the reader scrolls.
+ */
+.progress {
+  display: none;
+}
+@supports (animation-timeline: scroll()) {
+  /* A grid, so the bar stretches to the track's block size. */
+  .progress {
+    display: grid;
+    block-size: var(--space-3xs);
+    background-color: var(--border);
+    overflow: hidden;
+  }
+  .bar {
+    background-color: var(--accent-color, var(--magenta));
+    transform-origin: left;
+    animation: progress linear both;
+    animation-timeline: scroll(root block);
+  }
+  :host(:dir(rtl)) .bar {
+    transform-origin: right;
+  }
+  @keyframes progress {
+    from {
+      scale: 0 1;
+    }
+    to {
+      scale: 1 1;
+    }
+  }
+}

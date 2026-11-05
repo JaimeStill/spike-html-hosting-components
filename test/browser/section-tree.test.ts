@@ -1,0 +1,501 @@
+// sl-section-tree from this repository's dist/, on test/fixtures/section-tree.html, through its
+// public seam alone: the slotted list, the aria-current mark, the keys, the buttons, and the
+// progress bar. With no script the list renders and its links jump; aria-current follows the
+// scroll; ArrowRight and ArrowLeft move between sections, which the keys help dialog lists, and
+// do nothing with the keys turned off, while ArrowDown stays the browser's scrolling; a move is
+// smooth unless the reader asks for reduced motion; the progress bar runs on the root's scroll
+// timeline, guarded by @supports; and the tree renders in every profile the foundation's full
+// entry registers, light and dark, at 1280 and 390 px, with no sideways scroll and its focus
+// drawn.
+
+import assert from "node:assert/strict";
+import { after, before, beforeEach, describe, test } from "node:test";
+
+import { launch, SETTLED, until } from "@jaimestill/spike-html-apps-tooling/browser.js";
+import type { Browser, Page } from "@jaimestill/spike-html-apps-tooling/browser.js";
+import { serve } from "@jaimestill/spike-html-apps-tooling/server.js";
+import type { Server } from "@jaimestill/spike-html-apps-tooling/server.js";
+
+import { served } from "./support/served.ts";
+
+const FIXTURE = "/test/fixtures/section-tree.html";
+
+/** The tree's shadow root, in a page expression. */
+const SHADOW = `document.querySelector("sl-section-tree").shadowRoot`;
+
+/** The tree's links, in a page expression. */
+const LINKS = `[...document.querySelectorAll("sl-section-tree a")]`;
+
+/** The headings the links name, in tree order, in a page expression. */
+const HEADINGS = `${LINKS}.map((a) => document.getElementById(decodeURIComponent(a.hash.slice(1))))`;
+
+/** The keys the cases press, as the protocol's key events give them. */
+const KEYS = {
+  ArrowLeft: { key: "ArrowLeft", code: "ArrowLeft", windowsVirtualKeyCode: 37 },
+  ArrowRight: { key: "ArrowRight", code: "ArrowRight", windowsVirtualKeyCode: 39 },
+  ArrowDown: { key: "ArrowDown", code: "ArrowDown", windowsVirtualKeyCode: 40 },
+  Tab: { key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 },
+  "?": { key: "?", code: "Slash", windowsVirtualKeyCode: 191, modifiers: 8, text: "?" },
+};
+
+/** A key pressed and released on the focused element. */
+async function press(page: Page, name: keyof typeof KEYS): Promise<void> {
+  const { text, ...key } = { text: undefined, ...KEYS[name] };
+  await page.cdp("Input.dispatchKeyEvent", {
+    type: text === undefined ? "rawKeyDown" : "keyDown",
+    ...key,
+    ...(text === undefined ? {} : { text, unmodifiedText: text }),
+  });
+  await page.cdp("Input.dispatchKeyEvent", { type: "keyUp", ...key });
+}
+
+/** The viewport's size. */
+async function resize(page: Page, width: number, height = 800): Promise<void> {
+  await page.cdp("Emulation.setDeviceMetricsOverride", {
+    width,
+    height,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await until(page, `innerWidth === ${width} && innerHeight === ${height}`);
+}
+
+/** The reader's motion preference. */
+const motion = (page: Page, value: "reduce" | "no-preference") =>
+  page.cdp("Emulation.setEmulatedMedia", {
+    features: [{ name: "prefers-reduced-motion", value }],
+  });
+
+/** The index of the link carrying aria-current="location", or -1, and how many carry any. */
+const current = (page: Page): Promise<{ index: number; marked: number }> =>
+  page.evaluate(`(() => {
+    const links = ${LINKS};
+    return {
+      index: links.findIndex((a) => a.getAttribute("aria-current") === "location"),
+      marked: links.filter((a) => a.hasAttribute("aria-current")).length,
+    };
+  })()`);
+
+/** Resolves once the scroll has stopped: two frames with scrollY unchanged. */
+const still = (page: Page) =>
+  page.evaluate(`new Promise((resolve) => {
+    let last = scrollY;
+    let same = 0;
+    const frame = () => {
+      same = scrollY === last ? same + 1 : 0;
+      last = scrollY;
+      if (same >= 2) resolve(scrollY);
+      else requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  })`);
+
+/** The top of heading `index` in the viewport, in CSS px. */
+const headingTop = (page: Page, index: number): Promise<number> =>
+  page.evaluate(`${HEADINGS}[${index}].getBoundingClientRect().top`);
+
+describe("sl-section-tree", { timeout: 120_000 }, () => {
+  let server: Server;
+  let browser: Browser;
+  let page: Page;
+  before(async () => {
+    server = await serve(served);
+    browser = await launch();
+    page = await browser.open("about:blank");
+    await page.cdp("Emulation.setFocusEmulationEnabled", { enabled: true });
+  });
+  after(async () => {
+    await page?.close();
+    await browser?.close();
+    await server?.stop();
+  });
+
+  /** Loads the fixture at the viewport's size and motion, its keys settings cleared, rendered. */
+  async function load(
+    { width = 1280, reduce = true }: { width?: number; reduce?: boolean } = {},
+    query = "",
+  ) {
+    await resize(page, width);
+    await motion(page, reduce ? "reduce" : "no-preference");
+    await page.goto(`${server.origin}${FIXTURE}${query}`);
+    await page.evaluate(`localStorage.clear()`);
+    await page.goto(`${server.origin}${FIXTURE}${query}`);
+    await page.evaluate(`window.ready.then(() => ${SETTLED})`);
+  }
+
+  describe("with no script", () => {
+    before(async () => {
+      await page.cdp("Emulation.setScriptExecutionDisabled", { value: true });
+      await resize(page, 1280);
+      await page.goto(`${server.origin}${FIXTURE}`);
+    });
+    after(() => page.cdp("Emulation.setScriptExecutionDisabled", { value: false }));
+
+    test("the list renders, every link shown and naming a heading on the page", async () => {
+      const shown: { defined: boolean; links: { text: string; seen: boolean; named: boolean }[] } =
+        await page.evaluate(`({
+          defined: customElements.get("sl-section-tree") !== undefined,
+          links: ${LINKS}.map((a, i) => {
+            const box = a.getBoundingClientRect();
+            const heading = ${HEADINGS}[i];
+            return {
+              text: a.textContent.trim(),
+              seen: box.width > 0 && box.height > 0,
+              named: heading !== null && /^H[23]$/.test(heading.tagName),
+            };
+          }),
+        })`);
+      assert.equal(shown.defined, false, "no script defined the element");
+      assert.ok(shown.links.length >= 10, `the fixture's tree holds ${shown.links.length} links`);
+      for (const link of shown.links) {
+        assert.ok(link.seen, `${link.text} is shown`);
+        assert.ok(link.named, `${link.text} names an h2 or h3`);
+      }
+    });
+
+    test("a link jumps to its heading", async () => {
+      const box: { x: number; y: number } = await page.evaluate(`(() => {
+        const box = ${LINKS}[3].getBoundingClientRect();
+        return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+      })()`);
+      for (const type of ["mousePressed", "mouseReleased"]) {
+        await page.cdp("Input.dispatchMouseEvent", { type, ...box, button: "left", clickCount: 1 });
+      }
+      // until() and still() poll inside the page, which runs no script here: poll from the test,
+      // the jump smooth or not.
+      const deadline = Date.now() + 5_000;
+      let jumped = false;
+      while (!jumped && Date.now() < deadline) {
+        jumped = await page.evaluate(
+          `(() => {
+            // The target lands its scroll-margin below the viewport's top, as the reset sets it.
+            const heading = ${HEADINGS}[3];
+            const margin = parseFloat(getComputedStyle(heading).scrollMarginTop);
+            return location.hash === ${LINKS}[3].hash &&
+              Math.abs(heading.getBoundingClientRect().top - margin) <= 1;
+          })()`,
+        );
+        if (!jumped) await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      const where = await page.evaluate(
+        `({ hash: location.hash, want: ${LINKS}[3].hash, top: ${HEADINGS}[3].getBoundingClientRect().top })`,
+      );
+      assert.ok(jumped, JSON.stringify({ ...where, box }));
+    });
+  });
+
+  describe("with script", () => {
+    beforeEach(() => load());
+
+    test("the shadow root holds the nav landmark, named by label, around the slot", async () => {
+      const nav: { label: string; slotted: string[]; errors: string[] } = await page.evaluate(`({
+        label: ${SHADOW}.querySelector("nav").getAttribute("aria-label"),
+        slotted: ${SHADOW}.querySelector("nav slot").assignedElements().map((el) => el.localName),
+        errors: window.errors,
+      })`);
+      assert.deepEqual(nav, { label: "On this page", slotted: ["ul"], errors: [] });
+    });
+
+    test("aria-current marks the first section at the top, then follows the scroll", async () => {
+      assert.deepEqual(await current(page), { index: 0, marked: 1 });
+      const count: number = await page.evaluate(`${LINKS}.length`);
+      let reached = 0;
+      for (let i = 0; i < count; i++) {
+        await page.evaluate(
+          `${HEADINGS}[${i}].scrollIntoView({ block: "start", behavior: "instant" })`,
+        );
+        await still(page);
+        // A heading near the page's end can't reach the line; the cases check those it reaches.
+        if ((await headingTop(page, i)) > 1) continue;
+        reached++;
+        await until(page, `${LINKS}[${i}].getAttribute("aria-current") === "location"`);
+        assert.deepEqual(await current(page), { index: i, marked: 1 }, `section ${i}`);
+      }
+      assert.ok(reached >= count - 2, `${reached} of ${count} headings reached the line`);
+      await page.evaluate(`scrollTo({ top: 0, behavior: "instant" })`);
+      await until(page, `${LINKS}[0].getAttribute("aria-current") === "location"`);
+    });
+
+    test("ArrowRight and ArrowLeft move to the next and the previous section", async () => {
+      await press(page, "ArrowRight");
+      await still(page);
+      assert.deepEqual(await current(page), { index: 1, marked: 1 });
+      assert.ok(Math.abs(await headingTop(page, 1)) <= 1, "the next heading is at the top");
+      await press(page, "ArrowRight");
+      await still(page);
+      assert.deepEqual(await current(page), { index: 2, marked: 1 });
+      await press(page, "ArrowLeft");
+      await still(page);
+      assert.deepEqual(await current(page), { index: 1, marked: 1 });
+      assert.ok(Math.abs(await headingTop(page, 1)) <= 1, "the previous heading is at the top");
+    });
+
+    test("ArrowRight reaches the last section where the page can't scroll it to the line", async () => {
+      const count: number = await page.evaluate(`${LINKS}.length`);
+      for (let i = 1; i < count; i++) {
+        await press(page, "ArrowRight");
+        await still(page);
+        assert.deepEqual(await current(page), { index: i, marked: 1 }, `move ${i}`);
+      }
+      await press(page, "ArrowRight");
+      await still(page);
+      assert.deepEqual(await current(page), { index: count - 1, marked: 1 }, "past the last");
+      const next: boolean = await page.evaluate(`${SHADOW}.querySelector(".next").disabled`);
+      assert.equal(next, true, "Next is disabled at the last section");
+    });
+
+    test("ArrowDown stays the browser's scrolling, firing no binding", async () => {
+      await page.evaluate(`window.fired = [];
+        document.addEventListener("keys-fire", (event) => window.fired.push(event.detail.binding));`);
+      await press(page, "ArrowDown");
+      await until(page, "scrollY > 0");
+      assert.deepEqual(await page.evaluate("window.fired"), []);
+      assert.deepEqual(await current(page), { index: 0, marked: 1 });
+    });
+
+    test("the buttons move between sections, each showing its bracketed key hint", async () => {
+      const shown: { text: string; keys: string | null; disabled: boolean }[] =
+        await page.evaluate(`[...${SHADOW}.querySelectorAll(".moves button")].map((button) => ({
+          text: button.textContent.replace(/\\s+/g, " ").trim(),
+          keys: button.getAttribute("aria-keyshortcuts"),
+          disabled: button.disabled,
+        }))`);
+      assert.deepEqual(shown, [
+        { text: "Previous [←]", keys: "ArrowLeft", disabled: true },
+        { text: "Next [→]", keys: "ArrowRight", disabled: false },
+      ]);
+      await page.evaluate(`${SHADOW}.querySelector(".next").click()`);
+      await still(page);
+      assert.deepEqual(await current(page), { index: 1, marked: 1 });
+      await page.evaluate(`${SHADOW}.querySelector(".previous").click()`);
+      await still(page);
+      assert.deepEqual(await current(page), { index: 0, marked: 1 });
+    });
+
+    test("the keys help dialog lists both moves, and its row runs one", async () => {
+      await press(page, "?");
+      await until(page, `document.querySelector("#help [data-keys-table]")`);
+      const rows: string[][] = await page.evaluate(`[...document.querySelectorAll(
+        "#help [data-keys-table] tbody tr")].map((tr) => [...tr.cells].map((td) => td.textContent.trim()))`);
+      assert.ok(
+        rows.some(([keys, action]) => keys === "ArrowLeft" && action === "Previous section"),
+        JSON.stringify(rows),
+      );
+      assert.ok(
+        rows.some(([keys, action]) => keys === "ArrowRight" && action === "Next section"),
+        JSON.stringify(rows),
+      );
+      await page.evaluate(`[...document.querySelectorAll("#help [data-keys-table] button")]
+        .find((button) => button.textContent === "Next section").click()`);
+      await page.evaluate(`document.querySelector("#help").close()`);
+      await still(page);
+      assert.deepEqual(await current(page), { index: 1, marked: 1 });
+    });
+
+    test("with the keys turned off in the help dialog, the arrows do nothing", async () => {
+      await press(page, "?");
+      await until(page, `document.querySelector("#help [name=enabled]")`);
+      await page.evaluate(`document.querySelector("#help [name=enabled]").click()`);
+      await page.evaluate(`document.querySelector("#help").close()`);
+      await until(page, `!document.querySelector("#help").open`);
+      const keys: (string | null)[] = await page.evaluate(
+        `[...${SHADOW}.querySelectorAll(".moves button")].map((b) => b.getAttribute("aria-keyshortcuts"))`,
+      );
+      assert.deepEqual(keys, [null, null], "no aria-keyshortcuts while the keys are off");
+      await press(page, "ArrowRight");
+      await still(page);
+      assert.equal(await page.evaluate("scrollY"), 0);
+      assert.deepEqual(await current(page), { index: 0, marked: 1 });
+      // The buttons are no shortcut, and still move.
+      await page.evaluate(`${SHADOW}.querySelector(".next").click()`);
+      await still(page);
+      assert.deepEqual(await current(page), { index: 1, marked: 1 });
+      await press(page, "ArrowLeft");
+      await still(page);
+      assert.deepEqual(await current(page), { index: 1, marked: 1 });
+    });
+
+    test("under reduced motion a move jumps, with no smooth scroll", async () => {
+      const target: number = await page.evaluate(
+        `${HEADINGS}[2].getBoundingClientRect().top + scrollY`,
+      );
+      await press(page, "ArrowRight");
+      await press(page, "ArrowRight");
+      const at: number = await page.evaluate("scrollY");
+      assert.ok(Math.abs(at - target) <= 1, `scrollY ${at} is at ${target} at once`);
+    });
+
+    test("with no motion preference a move scrolls smoothly to its section", async () => {
+      await load({ reduce: false });
+      const target: number = await page.evaluate(
+        `${HEADINGS}[1].getBoundingClientRect().top + scrollY`,
+      );
+      await press(page, "ArrowRight");
+      const at: number = await page.evaluate("scrollY");
+      assert.ok(at < target - 1, `scrollY ${at} is short of ${target} as the move begins`);
+      await until(page, `Math.abs(scrollY - ${target}) <= 1`);
+      await still(page);
+      assert.deepEqual(await current(page), { index: 1, marked: 1 });
+    });
+  });
+
+  describe("the reading progress", () => {
+    beforeEach(() => load());
+
+    /** The bar's computed animation and its scale along the inline axis. */
+    const bar = (): Promise<{ name: string; timeline: string; shown: string; scale: number }> =>
+      page.evaluate(`(() => {
+        const bar = ${SHADOW}.querySelector(".bar");
+        const style = getComputedStyle(bar);
+        return {
+          name: style.animationName,
+          timeline: style.animationTimeline,
+          shown: getComputedStyle(bar.parentElement).display,
+          scale: new DOMMatrix(style.transform === "none" ? undefined : style.transform).a
+            * (style.scale === "none" ? 1 : Number(style.scale.split(" ")[0])),
+        };
+      })()`);
+
+    test("the bar runs on the root's scroll timeline and follows the scroll", async () => {
+      const top = await bar();
+      assert.equal(top.name, "progress");
+      assert.equal(top.timeline, "scroll(root)");
+      assert.equal(top.shown, "grid");
+      assert.ok(top.scale < 0.01, `scale ${top.scale} at the top`);
+      await page.evaluate(`scrollTo({ top: (document.documentElement.scrollHeight - innerHeight) / 2,
+        behavior: "instant" })`);
+      await page.evaluate(SETTLED);
+      const middle = await bar();
+      assert.ok(Math.abs(middle.scale - 0.5) < 0.05, `scale ${middle.scale} halfway`);
+      await page.evaluate(
+        `scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" })`,
+      );
+      await page.evaluate(SETTLED);
+      const end = await bar();
+      assert.ok(end.scale > 0.99, `scale ${end.scale} at the end`);
+    });
+
+    test("under reduced motion the bar still shows and follows the scroll", async () => {
+      await page.evaluate(
+        `scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" })`,
+      );
+      await page.evaluate(SETTLED);
+      const end = await bar();
+      assert.equal(end.shown, "grid");
+      assert.ok(end.scale > 0.99, `scale ${end.scale} at the end`);
+    });
+
+    test("without scroll timelines the indicator is absent: @supports guards it alone", async () => {
+      // The element's own sheet, the last adopted: the indicator hidden outside the guard, and
+      // every rule inside it the indicator's.
+      const sheet: { outside: string[]; condition: string; inside: string[] } =
+        await page.evaluate(`(() => {
+          const rules = [...${SHADOW}.adoptedStyleSheets.at(-1).cssRules];
+          const guard = rules.find((rule) => rule instanceof CSSSupportsRule);
+          return {
+            outside: rules.filter((rule) => rule instanceof CSSStyleRule && rule.selectorText === ".progress")
+              .map((rule) => rule.style.display),
+            condition: guard.conditionText,
+            inside: [...guard.cssRules].map((rule) => rule.selectorText ?? rule.name),
+          };
+        })()`);
+      assert.deepEqual(sheet, {
+        outside: ["none"],
+        condition: "(animation-timeline: scroll())",
+        inside: [".progress", ".bar", ":host(:dir(rtl)) .bar", "progress"],
+      });
+    });
+  });
+
+  describe("in every profile the full entry registers", () => {
+    /** The registry's names by facet, the first of each the default. */
+    let registry: { color: string[]; space: string[]; type: string[] };
+    before(async () => {
+      await load();
+      registry = await page.evaluate(`(() => {
+        const store = globalThis[Symbol.for("spike-html-apps-foundation.registry")];
+        return { color: store.color, space: store.space, type: store.type };
+      })()`);
+    });
+
+    test("registers every palette, space, and type the cases run", () => {
+      assert.ok(registry.color.length >= 4, JSON.stringify(registry));
+      assert.ok(registry.space.length >= 2, JSON.stringify(registry));
+      assert.ok(registry.type.length >= 2, JSON.stringify(registry));
+    });
+
+    /** Every palette at the other facets' defaults, then each other space and type, each light
+     * and dark, at 1280 and 390 px. */
+    const runs = () => {
+      const [palette] = registry.color;
+      const [space] = registry.space;
+      const [type] = registry.type;
+      const profiles = [
+        ...registry.color.map((name) => ({ palette: name, space, type })),
+        ...registry.space.slice(1).map((name) => ({ palette, space: name, type })),
+        ...registry.type.slice(1).map((name) => ({ palette, space, type: name })),
+      ];
+      return profiles.flatMap((profile) =>
+        ["light", "dark"].flatMap((scheme) =>
+          [1280, 390].map((width) => ({ ...profile, scheme, width })),
+        ),
+      );
+    };
+
+    test("renders with no sideways scroll and its focus drawn, light and dark, wide and narrow", async () => {
+      for (const run of runs()) {
+        const name = JSON.stringify(run);
+        const { width, ...profile } = run;
+        await load({ width }, `?${new URLSearchParams(profile)}`);
+        const shown: {
+          errors: string[];
+          dataset: Record<string, string>;
+          tree: { left: number; right: number; height: number };
+          scrollWidth: number;
+          clientWidth: number;
+        } = await page.evaluate(`(() => {
+          const box = ${SHADOW}.querySelector("nav").getBoundingClientRect();
+          return {
+            errors: window.errors,
+            dataset: { ...document.documentElement.dataset },
+            tree: { left: box.left, right: box.right, height: box.height },
+            scrollWidth: document.documentElement.scrollWidth,
+            clientWidth: document.documentElement.clientWidth,
+          };
+        })()`);
+        assert.deepEqual(shown.errors, [], name);
+        assert.deepEqual(shown.dataset, profile, name);
+        assert.ok(shown.tree.height > 0 && shown.tree.left >= 0, `${name}: the tree renders`);
+        assert.ok(shown.tree.right <= shown.clientWidth, `${name}: the tree fits the viewport`);
+        assert.ok(shown.scrollWidth <= shown.clientWidth, `${name}: no sideways scroll`);
+
+        // The keyboard reaches the help button, the first link, then past the links the Next
+        // button (Previous is disabled at the top); each draws its focus outline.
+        const count: number = await page.evaluate(`${LINKS}.length`);
+        const focused: { name: string; visible: boolean; outline: string }[] = [];
+        for (let i = 0; i < count + 2; i++) {
+          await press(page, "Tab");
+          if (i !== 1 && i !== count + 1) continue;
+          focused.push(
+            await page.evaluate(`(() => {
+              let el = document.activeElement;
+              while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
+              const style = getComputedStyle(el);
+              return {
+                name: el.textContent.replace(/\\s+/g, " ").trim(),
+                visible: el.matches(":focus-visible"),
+                outline: style.outlineStyle + " " + parseFloat(style.outlineWidth),
+              };
+            })()`),
+          );
+        }
+        assert.equal(focused[0].name, "Install", name);
+        assert.equal(focused[1].name, "Next [→]", name);
+        for (const { name: what, visible, outline } of focused) {
+          assert.ok(visible, `${name}: ${what} matches :focus-visible`);
+          assert.match(outline, /^solid [1-9]/, `${name}: ${what}'s outline is drawn`);
+        }
+      }
+    });
+  });
+});
