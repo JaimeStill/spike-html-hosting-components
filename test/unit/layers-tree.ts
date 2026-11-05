@@ -71,8 +71,8 @@ const installed = `../node_modules/${foundation}`;
 export const violations = {
   // A package the manifest doesn't declare, by name: the table allows lit and the foundation
   // alone. lit-html, which lit depends on, is installed beside it; the SDK, the sibling layer, is
-  // another layer's, and the root site sits above every layer; a devDependency ships nothing; and the
-  // package's own name resolves to its build, not its src/.
+  // another layer's, and the root site sits above every layer; a devDependency ships nothing; and
+  // the package's own name resolves to its build, not its src/.
   ...by([table, extraneous], {
     "src/sdk.ts": `import { Client } from "${sdk}/client.js";`,
     ...forms("src/forms/sdk", `${sdk}/client.js`),

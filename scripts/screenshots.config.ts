@@ -2,10 +2,10 @@
 // reads: the section tree's fixture page in its viewport, wide and narrow, at its top, scrolled to
 // a later section, which the tree marks and the progress bar reaches, and with the keys help
 // dialog open; the architecture fixture site's index page, at its base, with the site nav, the
-// site index, and the page header, wide and narrow, and with its theme menu open; the profile's facets, palette, space, and type, at flexoki, regular, and mono;
-// --all's profiles, every palette at the defaults, then compact and sans at flexoki; the profiles
-// the page registers, from the foundation's registry; and the repository served as the browser
-// tier serves it. The files go to a fresh directory under TMPDIR, or to --dir's, never into the
+// site index, and the page header, wide and narrow, and with its theme menu open; the profile's
+// facets, palette, space, and type, at flexoki, regular, and mono; --all's profiles, every palette
+// at the defaults, then compact and sans at flexoki; the profiles each page registers, from the
+// foundation's registry; and the repository served as the browser tier serves it. The files go to a fresh directory under TMPDIR, or to --dir's, never into the
 // repository unless --dir names its gitignored captures/.
 // Adapted from spike-html-apps-components (51d2b92): scripts/screenshots.config.ts, its pages
 // the section tree's fixture and the architecture fixture site's.
