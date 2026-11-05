@@ -1,12 +1,16 @@
 // sl-section-tree from this repository's dist/, on test/fixtures/section-tree.html, through its
-// public seam alone: the slotted list, the aria-current mark, the keys, the buttons, and the
-// progress bar. With no script the list renders and its links jump; aria-current follows the
-// scroll; L and H move between sections, which the keys help dialog lists, and do nothing with
-// the keys turned off, while every arrow stays the browser's scrolling, in the page and in a
-// region that scrolls sideways; a move is smooth unless the reader asks for reduced motion; the
-// progress bar runs on the root's scroll timeline, guarded by @supports; and the tree renders in
-// every profile the foundation's full entry registers, light and dark, at 1280 and 390 px, with
-// no sideways scroll and its focus drawn.
+// public seam alone: the slotted list, the aria-current mark, the keys, the buttons, the sticky
+// bar, and the progress bar. With no script the list renders and its links jump, wide and narrow;
+// no link is marked at the page's top, and aria-current follows the scroll; L and H cycle through
+// the top and the sections, wrapping either way, which the keys help dialog lists, and do nothing
+// with the keys turned off, while every arrow stays the browser's scrolling, in the page and in a
+// region that scrolls sideways; a move is smooth unless the reader asks for reduced motion; below
+// dock, exactly, for the default and a px dock, and never for a length the query can't read, the
+// tree is a bar stuck to the viewport's top, its links hidden, the root's scroll padding keeping
+// a heading a move or a link scrolls to below it and put back as it leaves; no link text breaks
+// inside a word, whatever the page inherits; the progress bar runs on the root's scroll timeline,
+// guarded by @supports; and the tree renders in every profile the foundation's full entry
+// registers, light and dark, at 1280 and 390 px, with no sideways scroll and its focus drawn.
 
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
@@ -20,6 +24,12 @@ import { registry as read, resize, runs, type Registry } from "./support/profile
 import { served } from "./support/served.ts";
 
 const FIXTURE = "/test/fixtures/section-tree.html";
+
+/** The tree's default dock, 70rem, at the initial font size, in px. */
+const DOCK = 1120;
+
+/** The tree, in a page expression. */
+const TREE = `document.querySelector("sl-section-tree")`;
 
 /** The tree's shadow root, in a page expression. */
 const SHADOW = `document.querySelector("sl-section-tree").shadowRoot`;
@@ -82,6 +92,10 @@ const still = (page: Page) =>
     requestAnimationFrame(frame);
   })`);
 
+/** The bottom of the tree's host in the viewport, in CSS px: the bar's lower edge, when it is one. */
+const treeBottom = (page: Page): Promise<number> =>
+  page.evaluate(`${TREE}.getBoundingClientRect().bottom`);
+
 /** The top of heading `index` in the viewport, in CSS px. */
 const headingTop = (page: Page, index: number): Promise<number> =>
   page.evaluate(`${HEADINGS}[${index}].getBoundingClientRect().top`);
@@ -123,9 +137,14 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
     });
     after(() => page.cdp("Emulation.setScriptExecutionDisabled", { value: false }));
 
-    test("the list renders, every link shown and naming a heading on the page", async () => {
-      const shown: { defined: boolean; links: { text: string; seen: boolean; named: boolean }[] } =
-        await page.evaluate(`({
+    test("the list renders, every link shown and naming a heading on the page, wide and narrow", async () => {
+      for (const width of [1280, 390]) {
+        await resize(page, width);
+        await page.goto(`${server.origin}${FIXTURE}`);
+        const shown: {
+          defined: boolean;
+          links: { text: string; seen: boolean; named: boolean }[];
+        } = await page.evaluate(`({
           defined: customElements.get("sl-section-tree") !== undefined,
           links: ${LINKS}.map((a, i) => {
             const box = a.getBoundingClientRect();
@@ -137,12 +156,15 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
             };
           }),
         })`);
-      assert.equal(shown.defined, false, "no script defined the element");
-      assert.ok(shown.links.length >= 10, `the fixture's tree holds ${shown.links.length} links`);
-      for (const link of shown.links) {
-        assert.ok(link.seen, `${link.text} is shown`);
-        assert.ok(link.named, `${link.text} names an h2 or h3`);
+        assert.equal(shown.defined, false, "no script defined the element");
+        assert.ok(shown.links.length >= 10, `the fixture's tree holds ${shown.links.length} links`);
+        for (const link of shown.links) {
+          assert.ok(link.seen, `${link.text} is shown at ${width}px`);
+          assert.ok(link.named, `${link.text} names an h2 or h3`);
+        }
       }
+      await resize(page, 1280);
+      await page.goto(`${server.origin}${FIXTURE}`);
     });
 
     test("a link jumps to its heading", async () => {
@@ -188,8 +210,8 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       assert.deepEqual(nav, { label: "On this page", slotted: ["ul"], errors: [] });
     });
 
-    test("aria-current marks the first section at the top, then follows the scroll", async () => {
-      assert.deepEqual(await current(page), { index: 0, marked: 1 });
+    test("aria-current marks no section at the top, then follows the scroll", async () => {
+      assert.deepEqual(await current(page), { index: -1, marked: 0 });
       const count: number = await page.evaluate(`${LINKS}.length`);
       let reached = 0;
       for (let i = 0; i < count; i++) {
@@ -205,10 +227,15 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       }
       assert.ok(reached >= count - 2, `${reached} of ${count} headings reached the line`);
       await page.evaluate(`scrollTo({ top: 0, behavior: "instant" })`);
-      await until(page, `${LINKS}[0].getAttribute("aria-current") === "location"`);
+      await still(page);
+      await until(page, `!${LINKS}.some((a) => a.hasAttribute("aria-current"))`);
     });
 
-    test("L and H move to the next and the previous section", async () => {
+    test("L from the top moves to the first section, then L and H to the next and the previous", async () => {
+      await press(page, "l");
+      await still(page);
+      assert.deepEqual(await current(page), { index: 0, marked: 1 });
+      assert.ok(Math.abs(await headingTop(page, 0)) <= 1, "the first heading is at the top");
       await press(page, "l");
       await still(page);
       assert.deepEqual(await current(page), { index: 1, marked: 1 });
@@ -222,18 +249,34 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       assert.ok(Math.abs(await headingTop(page, 1)) <= 1, "the previous heading is at the top");
     });
 
-    test("L reaches the last section where the page can't scroll it to the line", async () => {
+    test("L reaches the last section, where the page can't scroll it to the line, then the top", async () => {
       const count: number = await page.evaluate(`${LINKS}.length`);
-      for (let i = 1; i < count; i++) {
+      for (let i = 0; i < count; i++) {
         await press(page, "l");
         await still(page);
         assert.deepEqual(await current(page), { index: i, marked: 1 }, `move ${i}`);
       }
       await press(page, "l");
       await still(page);
-      assert.deepEqual(await current(page), { index: count - 1, marked: 1 }, "past the last");
-      const next: boolean = await page.evaluate(`${SHADOW}.querySelector(".next").disabled`);
-      assert.equal(next, true, "Next is disabled at the last section");
+      assert.equal(await page.evaluate("scrollY"), 0, "past the last, the page is at its top");
+      assert.deepEqual(await current(page), { index: -1, marked: 0 }, "past the last");
+      await press(page, "l");
+      await still(page);
+      assert.deepEqual(await current(page), { index: 0, marked: 1 }, "and round to the first");
+    });
+
+    test("H from the top moves to the last section, then back to the first, then the top", async () => {
+      const count: number = await page.evaluate(`${LINKS}.length`);
+      for (let i = count - 1; i >= 0; i--) {
+        await press(page, "h");
+        await still(page);
+        assert.deepEqual(await current(page), { index: i, marked: 1 }, `move to ${i}`);
+      }
+      assert.ok(Math.abs(await headingTop(page, 0)) <= 1, "the first heading is at the top");
+      await press(page, "h");
+      await still(page);
+      assert.equal(await page.evaluate("scrollY"), 0, "before the first, the page is at its top");
+      assert.deepEqual(await current(page), { index: -1, marked: 0 });
     });
 
     /** Records each keys-fire binding, and each keydown's key and whether it was cancelled. */
@@ -251,12 +294,14 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       await press(page, "ArrowLeft");
       await press(page, "ArrowDown");
       await until(page, "scrollY > 0");
+      await still(page);
       assert.deepEqual(await page.evaluate("window.fired"), []);
       assert.deepEqual(await page.evaluate("window.pressed"), [
         { key: "ArrowRight", cancelled: false },
         { key: "ArrowLeft", cancelled: false },
         { key: "ArrowDown", cancelled: false },
       ]);
+      // Scrolled off the top, the first heading is at the reading line: the scroll's mark, no move.
       assert.deepEqual(await current(page), { index: 0, marked: 1 });
     });
 
@@ -283,7 +328,7 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       assert.deepEqual(await current(page), before, "the section in view is unchanged");
     });
 
-    test("the buttons move between sections, each showing its bracketed key hint", async () => {
+    test("the buttons move between the top and the sections, each showing its bracketed key hint", async () => {
       const shown: { text: string; keys: string | null; disabled: boolean }[] =
         await page.evaluate(`[...${SHADOW}.querySelectorAll(".moves button")].map((button) => ({
           text: button.textContent.replace(/\\s+/g, " ").trim(),
@@ -291,15 +336,26 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
           disabled: button.disabled,
         }))`);
       assert.deepEqual(shown, [
-        { text: "Previous [H]", keys: "H", disabled: true },
+        { text: "Previous [H]", keys: "H", disabled: false },
         { text: "Next [L]", keys: "L", disabled: false },
       ]);
+      await page.evaluate(`${SHADOW}.querySelector(".next").click()`);
+      await still(page);
+      assert.deepEqual(await current(page), { index: 0, marked: 1 });
       await page.evaluate(`${SHADOW}.querySelector(".next").click()`);
       await still(page);
       assert.deepEqual(await current(page), { index: 1, marked: 1 });
       await page.evaluate(`${SHADOW}.querySelector(".previous").click()`);
       await still(page);
       assert.deepEqual(await current(page), { index: 0, marked: 1 });
+      await page.evaluate(`${SHADOW}.querySelector(".previous").click()`);
+      await still(page);
+      assert.deepEqual(await current(page), { index: -1, marked: 0 });
+      assert.equal(await page.evaluate("scrollY"), 0);
+      const count: number = await page.evaluate(`${LINKS}.length`);
+      await page.evaluate(`${SHADOW}.querySelector(".previous").click()`);
+      await still(page);
+      assert.deepEqual(await current(page), { index: count - 1, marked: 1 }, "round to the last");
     });
 
     test("the keys help dialog lists both moves, and its row runs one", async () => {
@@ -319,7 +375,7 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
         .find((button) => button.textContent === "Next section").click()`);
       await page.evaluate(`document.querySelector("#help").close()`);
       await still(page);
-      assert.deepEqual(await current(page), { index: 1, marked: 1 });
+      assert.deepEqual(await current(page), { index: 0, marked: 1 });
     });
 
     test("with the keys turned off in the help dialog, it marks H and L off and they do nothing", async () => {
@@ -350,19 +406,19 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       await press(page, "l");
       await still(page);
       assert.equal(await page.evaluate("scrollY"), 0);
-      assert.deepEqual(await current(page), { index: 0, marked: 1 });
+      assert.deepEqual(await current(page), { index: -1, marked: 0 });
       // The buttons are no shortcut, and still move.
       await page.evaluate(`${SHADOW}.querySelector(".next").click()`);
       await still(page);
-      assert.deepEqual(await current(page), { index: 1, marked: 1 });
+      assert.deepEqual(await current(page), { index: 0, marked: 1 });
       await press(page, "h");
       await still(page);
-      assert.deepEqual(await current(page), { index: 1, marked: 1 });
+      assert.deepEqual(await current(page), { index: 0, marked: 1 });
     });
 
     test("under reduced motion a move jumps, with no smooth scroll", async () => {
       const target: number = await page.evaluate(
-        `${HEADINGS}[2].getBoundingClientRect().top + scrollY`,
+        `${HEADINGS}[1].getBoundingClientRect().top + scrollY`,
       );
       await press(page, "l");
       await press(page, "l");
@@ -373,14 +429,159 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
     test("with no motion preference a move scrolls smoothly to its section", async () => {
       await load({ reduce: false });
       const target: number = await page.evaluate(
-        `${HEADINGS}[1].getBoundingClientRect().top + scrollY`,
+        `${HEADINGS}[0].getBoundingClientRect().top + scrollY`,
       );
       await press(page, "l");
       const at: number = await page.evaluate("scrollY");
       assert.ok(at < target - 1, `scrollY ${at} is short of ${target} as the move begins`);
       await until(page, `Math.abs(scrollY - ${target}) <= 1`);
       await still(page);
-      assert.deepEqual(await current(page), { index: 1, marked: 1 });
+      assert.deepEqual(await current(page), { index: 0, marked: 1 });
+    });
+  });
+
+  describe("below dock, the sticky bar", () => {
+    beforeEach(() => load({ width: 390 }));
+
+    /** The tree's mode, what of it renders, where it sits, and the root's scroll padding. */
+    const bar = (): Promise<{
+      mode: string | null;
+      links: boolean[];
+      progress: boolean;
+      buttons: boolean[];
+      top: number;
+      padding: string;
+      height: number;
+    }> =>
+      page.evaluate(`(() => {
+        const tree = ${TREE};
+        return {
+          mode: tree.matches(":state(bar)") ? "bar" : tree.matches(":state(docked)") ? "docked" : null,
+          links: ${LINKS}.map((a) => a.checkVisibility()),
+          progress: ${SHADOW}.querySelector(".progress").checkVisibility(),
+          buttons: [...${SHADOW}.querySelectorAll(".moves button")].map((b) => b.checkVisibility()),
+          top: tree.getBoundingClientRect().top,
+          padding: document.documentElement.style.scrollPaddingBlockStart,
+          height: Math.ceil(tree.getBoundingClientRect().height),
+        };
+      })()`);
+
+    test("holds the progress and the buttons alone, its links hidden, and sticks to the viewport's top", async () => {
+      const shown = await bar();
+      assert.equal(shown.mode, "bar");
+      assert.ok(shown.links.length >= 10 && shown.links.every((seen) => !seen), "no link shows");
+      assert.equal(shown.progress, true, "the progress shows");
+      assert.deepEqual(shown.buttons, [true, true], "both buttons show");
+      await page.evaluate(`scrollTo({ top: document.documentElement.scrollHeight / 2,
+        behavior: "instant" })`);
+      await still(page);
+      assert.equal((await bar()).top, 0, "the bar is at the viewport's top, scrolled halfway");
+      // A move from the bar's own Next button.
+      await page.evaluate(`${SHADOW}.querySelector(".next").click()`);
+      await still(page);
+      assert.equal((await bar()).top, 0, "and after a move");
+    });
+
+    test("the root's scroll padding is the bar's height, so a move lands its heading below the bar", async () => {
+      const shown = await bar();
+      assert.ok(shown.height > 0);
+      assert.equal(shown.padding, `${shown.height}px`);
+      for (const [key, index] of [
+        ["l", 0],
+        ["l", 1],
+        ["h", 0],
+      ] as const) {
+        await press(page, key);
+        await still(page);
+        assert.deepEqual(await current(page), { index, marked: 1 });
+        const top = await headingTop(page, index);
+        const bottom = await treeBottom(page);
+        assert.ok(
+          top >= bottom - 1 && top <= bottom + 2,
+          `heading ${index} at ${top}, the bar's foot ${bottom}`,
+        );
+      }
+    });
+
+    test("a link to a heading lands it below the bar", async () => {
+      const hash: string = await page.evaluate(`${LINKS}[5].hash`);
+      await page.evaluate(`location.hash = ${JSON.stringify(hash)}`);
+      await still(page);
+      const top = await headingTop(page, 5);
+      const bottom = await treeBottom(page);
+      assert.ok(await page.evaluate("scrollY > 0"), "the page scrolled to the heading");
+      assert.ok(top >= bottom - 1 && top < 800, `heading at ${top}, the bar's foot ${bottom}`);
+    });
+
+    test("leaving the bar puts back the root's own scroll padding, and entering it takes it again", async () => {
+      await page.evaluate(`(() => {
+        ${TREE}.remove();
+        document.documentElement.style.scrollPaddingBlockStart = "7px";
+        document.querySelector("aside").append(window.tree = document.createElement("sl-section-tree"));
+      })()`);
+      await page.evaluate(`window.tree.updateComplete`);
+      const empty: { mode: string | null; padding: string } = await bar();
+      assert.equal(empty.mode, "bar");
+      assert.notEqual(empty.padding, "7px", "the bar's padding replaces the page's");
+      await resize(page, 1280);
+      await until(page, `window.tree.matches(":state(docked)")`);
+      assert.equal((await bar()).padding, "7px", "docked, the page's own padding is back");
+      await resize(page, 390);
+      await until(page, `window.tree.matches(":state(bar)")`);
+      assert.notEqual((await bar()).padding, "7px");
+      await page.evaluate(`window.tree.remove()`);
+      assert.equal(
+        await page.evaluate(`document.documentElement.style.scrollPaddingBlockStart`),
+        "7px",
+        "removed, the page's own padding is back",
+      );
+    });
+
+    for (const [dock, px] of [
+      [undefined, DOCK],
+      ["600px", 600],
+    ] as const) {
+      test(`with dock ${dock ?? "at its default, 70rem"}, at exactly ${px}px it is a column, and at ${px - 1}px the bar`, async () => {
+        for (const [width, mode] of [
+          [px, "docked"],
+          [px - 1, "bar"],
+        ] as const) {
+          await load({ width });
+          if (dock !== undefined) await page.evaluate(`${TREE}.dock = ${JSON.stringify(dock)}`);
+          await until(page, `${TREE}.matches(":state(${mode})")`);
+          const shown = await bar();
+          assert.equal(shown.mode, mode, `at ${width}px`);
+          assert.equal(shown.links.every(Boolean), mode === "docked", `links at ${width}px`);
+        }
+      });
+    }
+
+    test("a dock the media query can't read leaves it a column at any width", async () => {
+      await page.evaluate(`${TREE}.dock = "wide"`);
+      await until(page, `${TREE}.matches(":state(docked)")`);
+      const shown = await bar();
+      assert.equal(shown.links.every(Boolean), true);
+      assert.equal(shown.padding, "");
+    });
+  });
+
+  describe("the link text", () => {
+    test("never breaks inside a word, whatever the page's breaking that it would inherit", async () => {
+      for (const width of [1280, 390]) {
+        await load({ width });
+        await page.evaluate(`(() => {
+          const style = document.createElement("style");
+          style.textContent = "body, aside { overflow-wrap: anywhere; word-break: break-all; }";
+          document.head.append(style);
+        })()`);
+        const wrapping: string[] = await page.evaluate(
+          `[...new Set(${LINKS}.map((a) => {
+            const style = getComputedStyle(a);
+            return style.overflowWrap + " " + style.wordBreak;
+          }))]`,
+        );
+        assert.deepEqual(wrapping, ["normal normal"], `at ${width}px`);
+      }
     });
   });
 
@@ -503,13 +704,17 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
         assert.ok(shown.tree.right <= shown.clientWidth, `${name}: the tree fits the viewport`);
         assert.ok(shown.scrollWidth <= shown.clientWidth, `${name}: no sideways scroll`);
 
-        // The keyboard reaches the help button, the first link, then past the links the Next
-        // button (Previous is disabled at the top); each draws its focus outline.
-        const count: number = await page.evaluate(`${LINKS}.length`);
+        // The keyboard reaches the help button, then, in the column, the first link and past the
+        // links the Previous and Next buttons; as the bar, whose links are hidden, the buttons
+        // straight after the help button. Each draws its focus outline.
+        const count: number = await page.evaluate(
+          `${LINKS}.filter((a) => a.checkVisibility()).length`,
+        );
+        assert.equal(count === 0, width < DOCK, `${name}: the links show only in the column`);
         const focused: { name: string; visible: boolean; outline: string }[] = [];
-        for (let i = 0; i < count + 2; i++) {
+        for (let i = 0; i < count + 3; i++) {
           await press(page, "Tab");
-          if (i !== 1 && i !== count + 1) continue;
+          if (count > 0 && i > 1 && i <= count) continue;
           focused.push(
             await page.evaluate(`(() => {
               let el = document.activeElement;
@@ -523,8 +728,11 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
             })()`),
           );
         }
-        assert.equal(focused[0].name, "Install", name);
-        assert.equal(focused[1].name, "Next [L]", name);
+        assert.deepEqual(
+          focused.map(({ name: what }) => what),
+          ["Keyboard shortcuts ?", ...(count > 0 ? ["Install"] : []), "Previous [H]", "Next [L]"],
+          name,
+        );
         for (const { name: what, visible, outline } of focused) {
           assert.ok(visible, `${name}: ${what} matches :focus-visible`);
           assert.match(outline, /^solid [1-9]/, `${name}: ${what}'s outline is drawn`);
