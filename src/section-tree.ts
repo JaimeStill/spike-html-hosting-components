@@ -156,12 +156,12 @@ export class SectionTree extends LitElement {
   #observer: IntersectionObserver | null = null;
   #unregister: (() => void)[] = [];
   /**
-   * The stop the last move reached, held as the one in view, so the next move counts from it,
-   * until the reader scrolls the page by other means: whatever the observer would mark there, a
-   * short section whose next heading is already past the line, or one the page can't scroll to
-   * the line, near its end. Null while the observer's rule holds.
+   * Whether the stop the last move reached, its target, is held as the one in view, so the next
+   * move counts from it, until the reader scrolls the page by other means: whatever the observer
+   * would mark there, a short section whose next heading is already past the line, or one the
+   * page can't scroll to the line, near its end. False while the observer's rule holds.
    */
-  #target: number | null = null;
+  #held = false;
   /** The root's scroll position the last move rests at, while a move's target is held. */
   #rest = 0;
   /** Whether a move's smooth scroll is under way: its scroll events are its own until it ends. */
@@ -334,12 +334,12 @@ export class SectionTree extends LitElement {
 
   /** The observer's call: the section in view follows the scroll, unless a move holds one. */
   #follow = (): void => {
-    if (this.#target === null) this.#mark(this.#atLine());
+    if (!this.#held) this.#mark(this.#atLine());
   };
 
   /** Drops a move's target, so the observer's rule holds again. */
   #release(): void {
-    this.#target = null;
+    this.#held = false;
     this.#moving = false;
   }
 
@@ -355,7 +355,7 @@ export class SectionTree extends LitElement {
    * scroll event, which follows a frame later, is no reader's.
    */
   #scrolled = (): void => {
-    if (this.#target === null || this.#moving || !this.#away()) return;
+    if (!this.#held || this.#moving || !this.#away()) return;
     this.#release();
     this.#mark(this.#atLine());
   };
@@ -368,7 +368,7 @@ export class SectionTree extends LitElement {
    * from the top to a first heading already above the line, is marked here.
    */
   #settle = (): void => {
-    if (this.#target !== null) {
+    if (this.#held) {
       const landed = document.documentElement.scrollTop;
       // A smooth scroll lands within a device pixel of its computed rest, which the rest then
       // takes, so no rounding of a fractional scale reads as the reader's scroll.
@@ -418,7 +418,7 @@ export class SectionTree extends LitElement {
     // with it the root's scroll padding, is read from it first, as sl-drawer's show() reads it.
     this.#change();
     const index = ((((this._index - TOP + step) % stops) + stops) % stops) + TOP;
-    this.#target = index;
+    this.#held = true;
     this.#mark(index);
     const smooth = !reduced();
     this.#rest = this.#destination(index);
