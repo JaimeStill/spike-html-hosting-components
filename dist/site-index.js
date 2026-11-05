@@ -1,25 +1,19 @@
 // The site index, Lit with a shadow root on the foundation's reset and elements sheets: every page
 // of the current site, slotted from the light DOM as a nested list of links by directory, the
 // link of the page on screen marked.
-
-import { html, LitElement, type PropertyDeclarations } from "lit";
-
+import { html, LitElement } from "lit";
 import elements from "@jaimestill/spike-html-apps-foundation/baseline/elements.css" with { type: "css" };
 import reset from "@jaimestill/spike-html-apps-foundation/baseline/reset.css" with { type: "css" };
 import { define } from "@jaimestill/spike-html-apps-foundation/dom.js";
 import styles from "./site-index.css" with { type: "css" };
-
 /** The tag the element defines. */
 export const tagName = "sl-site-index";
-
 /** The aria-current value the link of the page on screen carries. */
 export const CURRENT = "page";
-
 /** The page a path names, its directory's index page and the directory itself one page. */
-function page(pathname: string): string {
-  return pathname.replace(/\/index\.html$/, "/");
+function page(pathname) {
+    return pathname.replace(/\/index\.html$/, "/");
 }
-
 /**
  * A site's index. Its content is light-DOM HTML, the list the element slots, so with no script the
  * list still renders and every link still goes to its page:
@@ -58,54 +52,40 @@ function page(pathname: string): string {
  * shadow sheet can't reach below the slot's top level, so its look is the page's.
  */
 export class SiteIndex extends LitElement {
-  static styles = [reset, elements, styles];
-
-  static properties = {
-    label: { type: String },
-  } satisfies PropertyDeclarations;
-
-  /** The nav landmark's accessible name. */
-  declare label: string;
-
-  constructor() {
-    super();
-    this.label = "Pages";
-  }
-
-  connectedCallback(): void {
-    super.connectedCallback();
-    this.#mark();
-  }
-
-  render() {
-    return html`
+    static styles = [reset, elements, styles];
+    static properties = {
+        label: { type: String },
+    };
+    constructor() {
+        super();
+        this.label = "Pages";
+    }
+    connectedCallback() {
+        super.connectedCallback();
+        this.#mark();
+    }
+    render() {
+        return html `
       <nav aria-label=${this.label}>
         <slot @slotchange=${this.#mark}></slot>
       </nav>
     `;
-  }
-
-  /** Marks the first link to the page on screen with aria-current, and no other link. */
-  #mark = (): void => {
-    const here = page(location.pathname);
-    let found = false;
-    for (const link of this.querySelectorAll<HTMLAnchorElement>("a[href]")) {
-      const url = new URL(link.href);
-      const current = !found && url.origin === location.origin && page(url.pathname) === here;
-      if (current) {
-        link.setAttribute("aria-current", CURRENT);
-        found = true;
-      } else if (link.getAttribute("aria-current") === CURRENT) {
-        link.removeAttribute("aria-current");
-      }
     }
-  };
+    /** Marks the first link to the page on screen with aria-current, and no other link. */
+    #mark = () => {
+        const here = page(location.pathname);
+        let found = false;
+        for (const link of this.querySelectorAll("a[href]")) {
+            const url = new URL(link.href);
+            const current = !found && url.origin === location.origin && page(url.pathname) === here;
+            if (current) {
+                link.setAttribute("aria-current", CURRENT);
+                found = true;
+            }
+            else if (link.getAttribute("aria-current") === CURRENT) {
+                link.removeAttribute("aria-current");
+            }
+        }
+    };
 }
-
 define(tagName, SiteIndex);
-
-declare global {
-  interface HTMLElementTagNameMap {
-    "sl-site-index": SiteIndex;
-  }
-}
