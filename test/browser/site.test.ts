@@ -409,7 +409,16 @@ describe("the site components", { timeout: 180_000 }, () => {
   });
 
   describe("the theme across sites", () => {
-    before(() => page.cdp("Page.addScriptToEvaluateOnNewDocument", { source: RECORDER }));
+    /** How long the crossing holds each of the foundation's modules, in ms. */
+    const DELAY = 200;
+
+    before(async () => {
+      await page.cdp("Page.addScriptToEvaluateOnNewDocument", { source: RECORDER });
+      // Each request Fetch pauses, only while a crossing has it enabled, continues DELAY ms on.
+      page.on("Fetch.requestPaused", ({ requestId }: { requestId: string }) => {
+        setTimeout(() => page.cdp("Fetch.continueRequest", { requestId }).catch(() => {}), DELAY);
+      });
+    });
 
     /** Opens the theme menu, checks the palette and the scheme, and saves them. */
     async function choose(palette: string, scheme: string): Promise<void> {
@@ -432,18 +441,12 @@ describe("the site components", { timeout: 180_000 }, () => {
     /** The site nav's link to a site, in a page expression. */
     const link = (base: string) => `${shadow("sl-site-nav")}.querySelector('a[href="${base}"]')`;
 
-    /** How long the crossing holds each of the foundation's modules, in ms. */
-    const DELAY = 200;
-
     /**
      * Follows the site nav's link to the site, every module of the foundation's held DELAY ms, and
      * resolves to the new page's first frame: were the modules not render-blocking, the first frame
      * would come before them, the stored theme not yet applied. The frame's time shows it waited.
      */
     async function cross(base: string): Promise<Record<string, unknown>> {
-      page.on("Fetch.requestPaused", ({ requestId }: { requestId: string }) => {
-        setTimeout(() => page.cdp("Fetch.continueRequest", { requestId }).catch(() => {}), DELAY);
-      });
       await page.cdp("Fetch.enable", {
         patterns: [{ urlPattern: "*/spike-html-apps-foundation/dist/*.js" }],
       });

@@ -332,24 +332,21 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
   describe("the reading progress", () => {
     beforeEach(() => load());
 
-    /** The bar's computed animation and its scale along the inline axis. */
-    const bar = (): Promise<{ name: string; timeline: string; shown: string; scale: number }> =>
+    /** Whether the track shows, and the bar's scale along the inline axis. */
+    const bar = (): Promise<{ shown: string; scale: number }> =>
       page.evaluate(`(() => {
         const bar = ${SHADOW}.querySelector(".bar");
         const style = getComputedStyle(bar);
         return {
-          name: style.animationName,
-          timeline: style.animationTimeline,
           shown: getComputedStyle(bar.parentElement).display,
           scale: new DOMMatrix(style.transform === "none" ? undefined : style.transform).a
             * (style.scale === "none" ? 1 : Number(style.scale.split(" ")[0])),
         };
       })()`);
 
-    test("the bar runs on the root's scroll timeline and follows the scroll", async () => {
+    test("with no motion preference the bar follows the root's scroll", async () => {
+      await load({ reduce: false });
       const top = await bar();
-      assert.equal(top.name, "progress");
-      assert.equal(top.timeline, "scroll(root)");
       assert.equal(top.shown, "grid");
       assert.ok(top.scale < 0.01, `scale ${top.scale} at the top`);
       await page.evaluate(`scrollTo({ top: (document.documentElement.scrollHeight - innerHeight) / 2,
@@ -375,25 +372,39 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       assert.ok(end.scale > 0.99, `scale ${end.scale} at the end`);
     });
 
-    test("without scroll timelines the indicator is absent: @supports guards it alone", async () => {
-      // The element's own sheet, the last adopted: the indicator hidden outside the guard, and
-      // every rule inside it the indicator's.
-      const sheet: { outside: string[]; condition: string; inside: string[] } =
-        await page.evaluate(`(() => {
-          const rules = [...${SHADOW}.adoptedStyleSheets.at(-1).cssRules];
-          const guard = rules.find((rule) => rule instanceof CSSSupportsRule);
-          return {
-            outside: rules.filter((rule) => rule instanceof CSSStyleRule && rule.selectorText === ".progress")
-              .map((rule) => rule.style.display),
-            condition: guard.conditionText,
-            inside: [...guard.cssRules].map((rule) => rule.selectorText ?? rule.name),
-          };
-        })()`);
-      assert.deepEqual(sheet, {
-        outside: ["none"],
-        condition: "(animation-timeline: scroll())",
-        inside: [".progress", ".bar", ":host(:dir(rtl)) .bar", "progress"],
-      });
+    test("without scroll timelines the indicator is absent and nothing else changes", async () => {
+      // An engine without scroll timelines, emulated: every adopted sheet's rules guarded by
+      // animation-timeline support are dropped, as such an engine drops them.
+      const boxes = `(() => {
+        const size = (el) => {
+          const box = el.getBoundingClientRect();
+          return { width: box.width, height: box.height };
+        };
+        return {
+          progress: getComputedStyle(${SHADOW}.querySelector(".progress")).display,
+          list: size(${SHADOW}.querySelector("slot").assignedElements()[0]),
+          moves: size(${SHADOW}.querySelector(".moves")),
+          nav: size(${SHADOW}.querySelector("nav")).width,
+        };
+      })()`;
+      const supported: Record<string, unknown> = await page.evaluate(boxes);
+      await page.evaluate(`(() => {
+        const root = ${SHADOW};
+        root.adoptedStyleSheets = root.adoptedStyleSheets.map((sheet) => {
+          const rules = [...sheet.cssRules].filter(
+            (rule) =>
+              !(rule instanceof CSSSupportsRule && rule.conditionText.includes("animation-timeline")),
+          );
+          if (rules.length === sheet.cssRules.length) return sheet;
+          const without = new CSSStyleSheet();
+          without.replaceSync(rules.map((rule) => rule.cssText).join("\\n"));
+          return without;
+        });
+      })()`);
+      await page.evaluate(SETTLED);
+      const unsupported: Record<string, unknown> = await page.evaluate(boxes);
+      assert.equal(supported.progress, "grid");
+      assert.deepEqual(unsupported, { ...supported, progress: "none" });
     });
   });
 
