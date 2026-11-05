@@ -16,6 +16,7 @@ import type { Browser, Page } from "@jaimestill/spike-html-apps-tooling/browser.
 import { serve } from "@jaimestill/spike-html-apps-tooling/server.js";
 import type { Server } from "@jaimestill/spike-html-apps-tooling/server.js";
 
+import { registry as read, resize, runs, type Registry } from "./support/profiles.ts";
 import { served } from "./support/served.ts";
 
 const FIXTURE = "/test/fixtures/section-tree.html";
@@ -47,17 +48,6 @@ async function press(page: Page, name: keyof typeof KEYS): Promise<void> {
     ...(text === undefined ? {} : { text, unmodifiedText: text }),
   });
   await page.cdp("Input.dispatchKeyEvent", { type: "keyUp", ...key });
-}
-
-/** The viewport's size. */
-async function resize(page: Page, width: number, height = 800): Promise<void> {
-  await page.cdp("Emulation.setDeviceMetricsOverride", {
-    width,
-    height,
-    deviceScaleFactor: 1,
-    mobile: false,
-  });
-  await until(page, `innerWidth === ${width} && innerHeight === ${height}`);
 }
 
 /** The reader's motion preference. */
@@ -408,14 +398,10 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
   });
 
   describe("in every profile the full entry registers", () => {
-    /** The registry's names by facet, the first of each the default. */
-    let registry: { color: string[]; space: string[]; type: string[] };
+    let registry: Registry;
     before(async () => {
       await load();
-      registry = await page.evaluate(`(() => {
-        const store = globalThis[Symbol.for("spike-html-apps-foundation.registry")];
-        return { color: store.color, space: store.space, type: store.type };
-      })()`);
+      registry = await read(page);
     });
 
     test("registers every palette, space, and type the cases run", () => {
@@ -424,26 +410,8 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       assert.ok(registry.type.length >= 2, JSON.stringify(registry));
     });
 
-    /** Every palette at the other facets' defaults, then each other space and type, each light
-     * and dark, at 1280 and 390 px. */
-    const runs = () => {
-      const [palette] = registry.color;
-      const [space] = registry.space;
-      const [type] = registry.type;
-      const profiles = [
-        ...registry.color.map((name) => ({ palette: name, space, type })),
-        ...registry.space.slice(1).map((name) => ({ palette, space: name, type })),
-        ...registry.type.slice(1).map((name) => ({ palette, space, type: name })),
-      ];
-      return profiles.flatMap((profile) =>
-        ["light", "dark"].flatMap((scheme) =>
-          [1280, 390].map((width) => ({ ...profile, scheme, width })),
-        ),
-      );
-    };
-
     test("renders with no sideways scroll and its focus drawn, light and dark, wide and narrow", async () => {
-      for (const run of runs()) {
+      for (const run of runs(registry)) {
         const name = JSON.stringify(run);
         const { width, ...profile } = run;
         await load({ width }, `?${new URLSearchParams(profile)}`);

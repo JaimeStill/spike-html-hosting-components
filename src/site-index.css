@@ -1,0 +1,18 @@
+/*
+ * The site index's layout in a shadow root: site-index.ts adopts this sheet into its root after
+ * the foundation's reset and elements sheets (baseline/reset.css and elements.css). It reads only
+ * the foundation's baseline tokens, which a shadow root takes by inheritance from the page's entry,
+ * and every length is a --space-* step. Unlayered, it sits above the adopted layers in the root.
+ *
+ * The slotted list is the page's light DOM, laid out by the page's own sheets; the host breaks a
+ * long title anywhere rather than widen the page, and the slot's top-level list starts at the
+ * nav's edge.
+ */
+
+:host {
+  display: block;
+  overflow-wrap: anywhere;
+}
+::slotted(ul) {
+  margin: 0;
+}

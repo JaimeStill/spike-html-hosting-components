@@ -1,13 +1,14 @@
 // mise run screenshots' description, which spike-html-apps-tooling's spike-html-apps-screenshots
 // reads: the section tree's fixture page in its viewport, wide and narrow, at its top, scrolled to
 // a later section, which the tree marks and the progress bar reaches, and with the keys help
-// dialog open; the profile's facets, palette, space, and type, at flexoki, regular, and mono;
+// dialog open; the architecture fixture site's index page, at its base, with the site nav, the
+// site index, and the page header, wide and narrow, and with its theme menu open; the profile's facets, palette, space, and type, at flexoki, regular, and mono;
 // --all's profiles, every palette at the defaults, then compact and sans at flexoki; the profiles
 // the page registers, from the foundation's registry; and the repository served as the browser
 // tier serves it. The files go to a fresh directory under TMPDIR, or to --dir's, never into the
 // repository unless --dir names its gitignored captures/.
 // Adapted from spike-html-apps-components (51d2b92): scripts/screenshots.config.ts, its pages
-// the section tree's fixture.
+// the section tree's fixture and the architecture fixture site's.
 
 import type {
   DescribedPage,
@@ -77,12 +78,44 @@ const states: DescribedState[] = [
   },
 ];
 
+/** Opens the theme menu and resolves once theme-menu.js has filled it. */
+const theme: Step = async (page) => {
+  await page.evaluate(`(async () => {
+    await window.ready;
+    document.querySelector('[commandfor="theme"]').click();
+    while (!document.querySelector("sl-theme-menu dialog[open]")) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+  })()`);
+};
+
+/** The architecture fixture site's index page's states, each its viewport alone. */
+const site: DescribedState[] = [
+  { name: "site-wide", caption: "the site components, wide", viewport: wide, full: false },
+  { name: "site-narrow", caption: "the site components, narrow", viewport: narrow, full: false },
+  {
+    name: "site-theme",
+    caption: "the site components with the theme menu open",
+    viewport: wide,
+    full: false,
+    open: theme,
+  },
+];
+
 const pages: DescribedPage[] = [
   {
     name: "section-tree",
     caption: "the section tree",
     path: "test/fixtures/section-tree.html",
     states,
+  },
+  {
+    name: "site",
+    caption: "the site components",
+    // The site's base, which served.ts's handler answers with its index.html, so the site nav
+    // marks the architecture site as the site's own pages do.
+    path: "spike-html-hosting-architecture/",
+    states: site,
   },
 ];
 

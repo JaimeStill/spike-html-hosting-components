@@ -8,6 +8,16 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the packag
 
 ### Added
 
+- `sl-page-header`, `page-header.js`: a page's front matter, slotting a `dl` of its keys and
+  values in source order, laid out as terms beside their values; an empty or absent `dl` renders
+  nothing.
+- `sl-site-index`, `site-index.js`: every page of the current site, slotting a nested list by
+  directory, each directory labeled by its index page's link or by a `span` of its name. The link
+  of the page on screen carries `aria-current="page"`, the element its one writer.
+- `sl-site-nav`, `site-nav.js`: the sites this release lists, built into the element as `SITES`
+  (the org stand-in, the architecture stand-in, and sqlate), each linked root-relative at
+  `/<repository>/`; the site whose repository is the path's first segment carries
+  `aria-current="page"`. A change to the list is a release of the components.
 - `sl-section-tree`, `section-tree.js`: a page's table of contents, slotting a nested list of
   links to its h2 and h3 headings. The link of the section in view carries
   `aria-current="location"`; Left and Right move to the previous and next section through the
