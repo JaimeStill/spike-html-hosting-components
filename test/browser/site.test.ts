@@ -9,7 +9,8 @@
 // nothing; the index marks the page on screen, a directory labeled by its index page or its name;
 // the nav lists the components' sites and marks the current one by the path's first segment;
 // every component renders in every profile the foundation's full entry registers, light and dark,
-// at 1280 and 390 px, with no sideways scroll and its focus drawn; and the theme saved through the
+// at 1280 and 390 px, with no sideways scroll and its focus drawn, and at 390 px the drawer open
+// as a modal dialog the same; and the theme saved through the
 // menu on one site applies before first paint on the other, a palette the other doesn't register
 // falling back to its default and staying stored.
 
@@ -547,6 +548,65 @@ describe("the site components", { timeout: 180_000 }, () => {
           assert.ok(visible, `${name}: ${what} matches :focus-visible`);
           assert.match(outline, /^solid [1-9]/, `${name}: ${what}'s outline is drawn`);
         }
+      }
+    });
+
+    test("narrow, the drawer opens modally, with no sideways scroll and its focus drawn, light and dark", async () => {
+      for (const run of runs(registry).filter(({ width }) => width < DOCK)) {
+        const name = JSON.stringify(run);
+        const { width, ...profile } = run;
+        await load(PAGES.index, { width }, `?${new URLSearchParams(profile)}`);
+        await page.evaluate(`document.querySelector(".pages-opener").focus()`);
+        await page.evaluate(`document.querySelector(".pages-opener").click()`);
+        await until(page, `document.querySelector("sl-drawer").open`);
+        // The slide in run to its end, the dialog at rest.
+        await page.evaluate(
+          `Promise.all(${shadow("sl-drawer")}.getAnimations().map((a) => a.finished)).then(() => {})`,
+        );
+        // Opened, focus is on the Close button; Tab moves it to the drawer's next control.
+        await tab(page);
+        const shown: {
+          errors: string[];
+          modal: boolean;
+          dialog: { left: number; right: number };
+          widths: number[][];
+          focused: { name: string; inside: boolean; visible: boolean; outline: string };
+        } = await page.evaluate(`(() => {
+          const drawer = document.querySelector("sl-drawer");
+          const dialog = drawer.shadowRoot.querySelector("dialog");
+          const box = dialog.getBoundingClientRect();
+          let el = document.activeElement;
+          while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
+          const style = getComputedStyle(el);
+          return {
+            errors: window.errors,
+            modal: dialog.matches(":modal"),
+            dialog: { left: box.left, right: box.right },
+            // The page, the dialog, and its scrolling body, each as its scroll and client widths.
+            widths: [document.documentElement, dialog, dialog.querySelector(".body")].map(
+              (it) => [it.scrollWidth, it.clientWidth],
+            ),
+            focused: {
+              name: el.textContent.replace(/\\s+/g, " ").trim(),
+              inside: drawer.contains(el) || drawer.shadowRoot.contains(el),
+              visible: el.matches(":focus-visible"),
+              outline: style.outlineStyle + " " + parseFloat(style.outlineWidth),
+            },
+          };
+        })()`);
+        assert.deepEqual(shown.errors, [], name);
+        assert.ok(shown.modal, `${name}: the drawer's dialog is modal`);
+        assert.ok(
+          shown.dialog.left >= 0 && shown.dialog.right <= width,
+          `${name}: the dialog ${JSON.stringify(shown.dialog)} fits the viewport`,
+        );
+        for (const [scroll, client] of shown.widths) {
+          assert.ok(scroll <= client, `${name}: no sideways scroll, ${scroll} past ${client}`);
+        }
+        const { name: what, inside, visible, outline } = shown.focused;
+        assert.ok(inside, `${name}: Tab keeps focus in the drawer, on ${what}`);
+        assert.ok(visible, `${name}: ${what} matches :focus-visible`);
+        assert.match(outline, /^solid [1-9]/, `${name}: ${what}'s outline is drawn`);
       }
     });
   });
