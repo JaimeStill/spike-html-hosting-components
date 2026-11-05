@@ -6,6 +6,33 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the packag
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-05
+
+### Added
+
+- `sl-drawer`, `drawer.js`, copied with its behavior and markup contract from
+  spike-html-apps-components (51d2b92): its slotted children docked in an `aside` at `dock`
+  (48rem by default) and wider, and below it a modal dialog covering the viewport, closed by its
+  Close button or Escape, focus returned to its opener, the children never moved. A site holds its
+  site index in `<sl-drawer label="Pages">`, opened by a "Pages [P]" header button of the page's
+  own, bound to P through the foundation's keys module by `data-keys="p"`, as the README shows.
+- `sl-section-tree`'s `dock`, a CSS length, `70rem` by default (`DOCK`), read in the media query
+  `(width < <dock>)`: below it the tree is a bar stuck to the top of the viewport holding the
+  reading progress and the Previous and Next buttons alone, its links hidden, and the root's
+  scroll padding set to the bar's height so a heading a move or a link scrolls to lands below it.
+  The mode is a custom state, `docked` or `bar`.
+
+### Changed
+
+- `sl-section-tree`'s H and L cycle through the page's top and its sections, wrapping: L from the
+  top goes to the first section and past the last back to the top, H from the top to the last
+  section and from the first to the top. At the top no link is marked `aria-current`, where the
+  first section's was before, and the Previous and Next buttons are disabled only when the tree
+  names no section.
+- `sl-section-tree`, `sl-site-index`, and `sl-site-nav` never break link text inside a word: each
+  sets `overflow-wrap` and `word-break` to `normal`, where the tree and the index broke a long
+  link anywhere.
+
 ## [0.1.0] - 2026-11-05
 
 ### Added
