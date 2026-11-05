@@ -3,11 +3,10 @@
 // progress bar. With no script the list renders and its links jump; aria-current follows the
 // scroll; L and H move between sections, which the keys help dialog lists, and do nothing with
 // the keys turned off, while every arrow stays the browser's scrolling, in the page and in a
-// region that scrolls sideways; a move is
-// smooth unless the reader asks for reduced motion; the progress bar runs on the root's scroll
-// timeline, guarded by @supports; and the tree renders in every profile the foundation's full
-// entry registers, light and dark, at 1280 and 390 px, with no sideways scroll and its focus
-// drawn.
+// region that scrolls sideways; a move is smooth unless the reader asks for reduced motion; the
+// progress bar runs on the root's scroll timeline, guarded by @supports; and the tree renders in
+// every profile the foundation's full entry registers, light and dark, at 1280 and 390 px, with
+// no sideways scroll and its focus drawn.
 
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
