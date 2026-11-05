@@ -6,8 +6,9 @@
 // docked, narrow with it closed and open by P, and with its theme menu open; the profile's
 // facets, palette, space, and type, at flexoki, regular, and mono; --all's profiles, every palette
 // at the defaults, then compact and sans at flexoki; the profiles each page registers, from the
-// foundation's registry; and the repository served as the browser tier serves it. The files go to a fresh directory under TMPDIR, or to --dir's, never into the
-// repository unless --dir names its gitignored captures/.
+// foundation's registry; and the repository served as the browser tier serves it. The files go
+// to a fresh directory under TMPDIR, or to --dir's, never into the repository unless --dir names
+// its gitignored captures/.
 // Adapted from spike-html-apps-components (51d2b92): scripts/screenshots.config.ts, its pages
 // the section tree's fixture and the architecture fixture site's.
 

@@ -53,7 +53,10 @@ describe("component lengths", () => {
   });
 
   for (const name of sheets) {
-    test(`${name} writes every length as a --space-* step`, () => {
+    const title = KEPT[name]
+      ? `${name} writes every space as a --space-* step, and keeps only its provenance's other lengths`
+      : `${name} writes every length as a --space-* step`;
+    test(title, () => {
       const css = readFileSync(join(src, name), "utf8");
       const kept = KEPT[name] ?? { lengths: [], tokens: [] };
       const found = values(css).flatMap((value) => value.match(LENGTH) ?? []);

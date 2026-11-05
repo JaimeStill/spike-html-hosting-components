@@ -3,8 +3,8 @@
 The documentation components layer of spike-html-hosting: five Lit elements with shadow roots,
 and their sheets, that the spike's GitHub Pages sites build their pages from, the section tree,
 the page header, the site index, the nav between the sites, and the drawer that holds the site
-index where its column doesn't fit. It is ES modules with their type
-declarations and stylesheets, built on
+index where its column doesn't fit. It is ES modules with their type declarations and
+stylesheets, built on
 [spike-html-apps-foundation](https://github.com/JaimeStill/spike-html-apps-foundation), which it
 takes as a peer, and is released by git tag.
 
@@ -299,9 +299,9 @@ mise run currency                     # report every tool, package, and action p
 `test/fixtures/section-tree.html` is the section tree's fixture page, `test/fixtures/drawer.html`
 the drawer cases' page, and `test/fixtures/sites/` holds two fixture sites served at their project
 sites' paths: the architecture stand-in's, with the site nav, the site index in its Pages drawer
-and opener, and the page header, and sqlate's, with the site nav. The browser
-tier runs on them in the pinned chrome-headless-shell, and `mise run screenshots` captures them
-through the `spike-html-apps-screenshots` bin of
+and opener, and the page header, and sqlate's, with the site nav. The browser tier runs on them
+in the pinned chrome-headless-shell, and `mise run screenshots` captures them through the
+`spike-html-apps-screenshots` bin of
 [spike-html-apps-tooling](https://github.com/JaimeStill/spike-html-apps-tooling).
 
 A push to main whose `package.json` version has no tag yet releases it: the check, then the pack

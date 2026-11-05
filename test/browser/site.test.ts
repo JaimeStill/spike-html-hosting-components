@@ -4,14 +4,14 @@
 // narrow, the Pages button hidden, and the page reads without the site nav; the site index sits in
 // the Pages drawer, docked beside the article wide, and narrow a modal dialog the Pages button or
 // P opens, which Escape or its Close button closes, focus back on the button; no navigation text
-// breaks inside a word, whatever the page inherits; the header slots the front matter as a grid of terms beside their
-// values, in source order and as text, and an empty or absent dl renders nothing; the index marks
-// the page on screen, a directory labeled by its index page or its name; the nav lists the
-// components' sites and marks the current one by the path's first segment; every component
-// renders in every profile the foundation's full entry registers, light and dark, at 1280 and
-// 390 px, with no sideways scroll and its focus drawn; and the theme saved through the menu on
-// one site applies before first paint on the other, a palette the other doesn't register falling
-// back to its default and staying stored.
+// breaks inside a word, whatever the page inherits; the header slots the front matter as a grid
+// of terms beside their values, in source order and as text, and an empty or absent dl renders
+// nothing; the index marks the page on screen, a directory labeled by its index page or its name;
+// the nav lists the components' sites and marks the current one by the path's first segment;
+// every component renders in every profile the foundation's full entry registers, light and dark,
+// at 1280 and 390 px, with no sideways scroll and its focus drawn; and the theme saved through the
+// menu on one site applies before first paint on the other, a palette the other doesn't register
+// falling back to its default and staying stored.
 
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
@@ -53,6 +53,9 @@ const SITES = [
   ["Architecture", "/spike-html-hosting-architecture/"],
   ["sqlate", "/spike-html-hosting-sqlate/"],
 ];
+
+/** The drawer's default dock, 48rem, at the initial font size, in px: the fixture sites' too. */
+const DOCK = 768;
 
 /** The localStorage key the foundation's preferences keep the theme under. */
 const KEY = "spike-html-apps-foundation.preferences";
@@ -493,7 +496,7 @@ describe("the site components", { timeout: 180_000 }, () => {
         } = await page.evaluate(`(() => {
           const boxes = {};
           // Narrow, the site index is in the closed drawer, and the Pages button is in its place.
-          const tags = ["sl-page-header", ${width} < 768 ? ".pages-opener" : "sl-site-index", "sl-site-nav"];
+          const tags = ["sl-page-header", ${width} < ${DOCK} ? ".pages-opener" : "sl-site-index", "sl-site-nav"];
           for (const tag of tags) {
             const box = document.querySelector(tag).getBoundingClientRect();
             boxes[tag] = { left: box.left, right: box.right, height: box.height };
@@ -535,7 +538,7 @@ describe("the site components", { timeout: 180_000 }, () => {
         }
         assert.deepEqual(
           focused.map(({ name: what }) => what),
-          width < 768
+          width < DOCK
             ? ["Org", "Architecture", "sqlate", "Pages [P]", "Theme"]
             : ["Org", "Architecture", "sqlate", "Theme", "The architecture stand-in"],
           name,
