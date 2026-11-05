@@ -125,14 +125,14 @@ const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
  * with a fragment holds no stop: its section in view is the reading line's. Once the reader
  * scrolls by other means, the wheel, the keyboard, a link to no listed section, or the scrollbar,
  * the mark follows the reading line again and the next move counts from the section in view. H
- * and L are bound by register() in the foundation's keys module, so its help dialog lists them and its
- * off switch, which covers character keys, turns them off. Every arrow key stays the browser's
- * own scrolling, in the page and in any region that scrolls sideways: the keys module cancels each
- * key a binding matches, so the element binds none. The Previous and Next buttons, with the
- * bracketed key hints [H] and [L], move the same way whatever the setting, are disabled only when
- * the tree names no section, and carry aria-keyshortcuts while the setting has the keys fire. A
- * move scrolls smoothly unless the reader asks for reduced motion; its scroll ends at its scrollend
- * or, in an engine that fires none, once the page has stood still for a few frames.
+ * and L are bound by register() in the foundation's keys module, so its help dialog lists them
+ * and its off switch, which covers character keys, turns them off. Every arrow key stays the
+ * browser's own scrolling, in the page and in any region that scrolls sideways: the keys module
+ * cancels each key a binding matches, so the element binds none. The Previous and Next buttons,
+ * with the bracketed key hints [H] and [L], move the same way whatever the setting, are disabled
+ * only when the tree names no section, and carry aria-keyshortcuts while the setting has the keys
+ * fire. A move scrolls smoothly unless the reader asks for reduced motion; its scroll ends at its
+ * scrollend or, in an engine that fires none, once the page has stood still for a few frames.
  *
  * At `dock`, a CSS length (DOCK, 70rem, by default), and wider, the tree is a column: the
  * progress, the links, and the buttons. Below it the tree is a bar stuck to the top of the
@@ -463,7 +463,9 @@ export class SectionTree extends LitElement {
     });
   };
 
-  /** A change of the fragment, by any link, a script, or the history: one a section names holds it. */
+  /**
+   * A change of the fragment, by any link, a script, or the history: one a section names holds it.
+   */
   #hashed = (): void => {
     const heading = document.getElementById(fragment(location.hash));
     const index = this.#sections.findIndex((section) => section.heading === heading);

@@ -14,12 +14,12 @@
 // test/fixtures/section-tree-short.html, whose sections are shorter than the reading line's
 // distance from the top, L and H visit every stop in order, each move counting from the stop the
 // last one reached, at 1280 and 390 px, instant and smooth, and with a smooth move's scroll cut
-// short by the next, and with no scrollend, as an engine may fire none, the moves still cycle and a
-// reader's scroll still takes the mark; the mark follows a reader's scroll as it happens, and
-// after it the next move counts from the section in view; and a link followed to a listed section holds it as a move
-// would, a tree link clicked or entered at 1280 px, the fragment already in the URL included, and
-// a fragment changed by a script or a link elsewhere on the page at 1280 and 390 px, where the
-// tree's links are hidden in the bar.
+// short by the next, and with no scrollend, as an engine may fire none, the moves still cycle and
+// a reader's scroll still takes the mark; the mark follows a reader's scroll as it happens, and
+// after it the next move counts from the section in view; and a link followed to a listed section
+// holds it as a move would, a tree link clicked or entered at 1280 px, the fragment already in the
+// URL included, and a fragment changed by a script or a link elsewhere on the page at 1280 and
+// 390 px, where the tree's links are hidden in the bar.
 
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
