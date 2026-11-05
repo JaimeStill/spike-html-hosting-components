@@ -14,8 +14,9 @@
 // test/fixtures/section-tree-short.html, whose sections are shorter than the reading line's
 // distance from the top, L and H visit every stop in order, each move counting from the stop the
 // last one reached, at 1280 and 390 px, instant and smooth, and with a smooth move's scroll cut
-// short by the next; the mark follows a reader's scroll as it happens, and after it the next move
-// counts from the section in view; and a link followed to a listed section holds it as a move
+// short by the next, and with no scrollend, as an engine may fire none, the moves still cycle and a
+// reader's scroll still takes the mark; the mark follows a reader's scroll as it happens, and
+// after it the next move counts from the section in view; and a link followed to a listed section holds it as a move
 // would, a tree link clicked or entered at 1280 px, the fragment already in the URL included, and
 // a fragment changed by a script or a link elsewhere on the page at 1280 and 390 px, where the
 // tree's links are hidden in the bar.
@@ -696,6 +697,48 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
         await still(page);
         await page.evaluate(SETTLED);
         assert.deepEqual(await current(page), { index: 3, marked: 1 }, "four Ls from the top");
+      });
+
+      test(`with no scrollend, smooth moves still cycle and a reader's scroll still takes the mark, at ${width}px`, async () => {
+        await short({ width, reduce: false });
+        // An engine that fires no scrollend, as Safari may: the event stopped at the window, in
+        // its capture phase, before the document's listeners.
+        await page.evaluate(
+          `addEventListener("scrollend", (event) => event.stopImmediatePropagation(), { capture: true })`,
+        );
+        const count: number = await page.evaluate(`${LINKS}.length`);
+        for (let i = 0; i < count; i++) {
+          await move("l", i);
+          assert.deepEqual(await current(page), { index: i, marked: 1 }, `L to ${i}`);
+        }
+        await move("l", -1);
+        assert.deepEqual(await current(page), { index: -1, marked: 0 }, "past the last");
+        for (let i = 0; i < 3; i++) await move("l", i);
+        await page.cdp("Input.dispatchMouseEvent", {
+          type: "mouseWheel",
+          x: width / 2,
+          y: 400,
+          deltaX: 0,
+          deltaY: 1200,
+        });
+        await until(page, `scrollY > ${await rest(2)} + 100`);
+        await still(page);
+        // The mark takes the line's section once the move's scroll is taken to have ended.
+        await until(
+          page,
+          `${LINKS}.findIndex((a) => a.getAttribute("aria-current") === "location") === ${HEADINGS}
+            .findLastIndex((heading) => heading.getBoundingClientRect().top <= innerHeight * 0.34 + 1)`,
+          2000,
+        );
+        const wheeled = await atLine();
+        assert.ok(wheeled > 2, `the wheel took the line past the move's target, to ${wheeled}`);
+        assert.deepEqual(await current(page), { index: wheeled, marked: 1 }, "the mark follows");
+        await move("l", wheeled + 1);
+        assert.deepEqual(
+          await current(page),
+          { index: wheeled + 1, marked: 1 },
+          "L counts from it",
+        );
       });
 
       test(`the mark follows a reader's scroll as it happens, before the scroll ends, at ${width}px`, async () => {

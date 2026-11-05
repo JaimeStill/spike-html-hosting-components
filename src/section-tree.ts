@@ -51,6 +51,20 @@ const TOP = -1;
  */
 const LINE = 0.34;
 
+/**
+ * The frames a move's smooth scroll stands still for, with no scrollend, before it is taken to
+ * have ended: an engine may fire no scrollend, as Safari may within the browser floor. Five, near
+ * a twelfth of a second at 60 Hz, so a scroll whose first frame has yet to move it isn't ended.
+ */
+const STILL = 5;
+
+/**
+ * The longest, in ms, a move's smooth scroll runs with no scrollend before it is taken to have
+ * ended, whatever its frames: longer than any engine's smooth scroll, and a bound where no frame
+ * runs, as in a hidden tab.
+ */
+const LONGEST = 3000;
+
 /** One entry of the tree: a slotted link and the heading its fragment names. */
 interface Section {
   link: HTMLAnchorElement;
@@ -117,7 +131,8 @@ const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
  * key a binding matches, so the element binds none. The Previous and Next buttons, with the
  * bracketed key hints [H] and [L], move the same way whatever the setting, are disabled only when
  * the tree names no section, and carry aria-keyshortcuts while the setting has the keys fire. A
- * move scrolls smoothly unless the reader asks for reduced motion.
+ * move scrolls smoothly unless the reader asks for reduced motion; its scroll ends at its scrollend
+ * or, in an engine that fires none, once the page has stood still for a few frames.
  *
  * At `dock`, a CSS length (DOCK, 70rem, by default), and wider, the tree is a column: the
  * progress, the links, and the buttons. Below it the tree is a bar stuck to the top of the
@@ -169,8 +184,14 @@ export class SectionTree extends LitElement {
   #held = false;
   /** The root's scroll position the last move rests at, while a move's target is held. */
   #rest = 0;
-  /** Whether a move's smooth scroll is under way: its scroll events are its own until it ends. */
+  /**
+   * Whether a move's smooth scroll is under way: its scroll events are its own until it ends, at
+   * its scrollend or, in an engine that fires none, once it stands still.
+   */
   #moving = false;
+  /** The frame and the timer that end a smooth scroll no scrollend ends, while one is under way. */
+  #frame = 0;
+  #timer = 0;
   // The mode is a custom state, docked or bar, which the page may style.
   readonly #internals = this.attachInternals();
   #query: MediaQueryList | null = null;
@@ -223,6 +244,7 @@ export class SectionTree extends LitElement {
     removeEventListener("hashchange", this.#hashed);
     document.removeEventListener("change", this.#refresh);
     removeEventListener("storage", this.#refresh);
+    this.#untrack();
     this.#observer?.disconnect();
     this.#observer = null;
     this.#query?.removeEventListener("change", this.#change);
@@ -352,6 +374,36 @@ export class SectionTree extends LitElement {
   #release(): void {
     this.#held = false;
     this.#moving = false;
+    this.#untrack();
+  }
+
+  /**
+   * A move's scroll, from where it begins: under way while the root is away from its rest, until
+   * it ends, at its scrollend or, with none, after STILL frames of the root standing still, or at
+   * LONGEST, whichever comes first. Each of them settles the scroll, which ends the others, so one
+   * settles it.
+   */
+  #run(): void {
+    this.#untrack();
+    this.#moving = this.#away();
+    if (!this.#moving) return;
+    const root = document.documentElement;
+    let last = root.scrollTop;
+    let still = 0;
+    const frame = () => {
+      still = root.scrollTop === last ? still + 1 : 0;
+      last = root.scrollTop;
+      if (still >= STILL) this.#settle();
+      else this.#frame = requestAnimationFrame(frame);
+    };
+    this.#frame = requestAnimationFrame(frame);
+    this.#timer = setTimeout(this.#settle, LONGEST);
+  }
+
+  /** Ends the watch on a move's scroll, its frames and its timer, as the scroll settles. */
+  #untrack(): void {
+    cancelAnimationFrame(this.#frame);
+    clearTimeout(this.#timer);
   }
 
   /** Whether the root is scrolled away from where the last move rests. */
@@ -372,13 +424,15 @@ export class SectionTree extends LitElement {
   };
 
   /**
-   * A scroll's end: a move's scroll, smooth or instant, that came to its rest leaves the target
+   * A scroll's end, at its scrollend or, for a move's smooth scroll with none, as #run() takes it
+   * to have ended: a move's scroll, smooth or instant, that came to its rest leaves the target
    * held; else the section at the line is in view, the target released if the reader took the
    * move's scroll elsewhere on the way. The observer calls only as a heading crosses the line or
    * the viewport's top, so a scroll off the page's top that moves no heading across either, as
    * from the top to a first heading already above the line, is marked here.
    */
   #settle = (): void => {
+    this.#untrack();
     if (this.#held) {
       const landed = document.documentElement.scrollTop;
       // A smooth scroll lands within a device pixel of its computed rest, which the rest then
@@ -425,7 +479,7 @@ export class SectionTree extends LitElement {
     this.#held = true;
     this.#mark(index);
     this.#rest = this.#destination(index);
-    this.#moving = this.#away();
+    this.#run();
   }
 
   /**
@@ -475,7 +529,7 @@ export class SectionTree extends LitElement {
     else this.#sections[index].heading.scrollIntoView({ block: "start", behavior });
     // An instant scroll has landed already, and its rest is where it landed; a smooth one runs
     // until its scrollend, unless the root is at its rest already and it scrolls nowhere.
-    if (smooth) this.#moving = this.#away();
+    if (smooth) this.#run();
     else this.#rest = document.documentElement.scrollTop;
   }
 }

@@ -22,6 +22,11 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the packag
   the tree's own links, and any change of the URL's fragment to a listed heading's id, by a link
   elsewhere on the page, a script, or the history, make that section the held stop, as an H or L
   move to it would; the link's navigation and scroll stay the browser's.
+- `sl-section-tree`'s mark no longer freezes after a smooth move in an engine that fires no
+  `scrollend`, as Safari may. A move's smooth scroll, or a followed link's, ends at its
+  `scrollend`, or, with none, once the page has stood still for five frames, or after three
+  seconds at most, whichever comes first, and settles once, where a reader's scroll after it was
+  taken for the move's own and the mark stayed on the move's stop.
 
 ## [0.2.0] - 2026-11-05
 
