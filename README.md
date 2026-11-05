@@ -79,7 +79,11 @@ GitHub's heading id, with a nested `ul` or `ol` for the `h3`s under it:
 - H and L move to the previous and the next stop, the page's top then each section, and wrap: L
   from the top goes to the first section and past the last back to the top; H from the top goes
   to the last section and from the first to the top. A move to a section scrolls its heading to
-  the top of the viewport, and one to the top scrolls the page to 0. They are bound by
+  the top of the viewport, and one to the top scrolls the page to 0. Each move counts from the
+  stop the last one reached, which stays marked while the page rests where the move left it, even
+  a short section whose next heading is already past the reading line, or the last section, which
+  the page can't scroll to the line; once the reader scrolls by other means, the mark follows the
+  reading line again and the next move counts from the section in view. H and L are bound by
   `register()` in the foundation's keys module, so its help dialog lists them as "Previous
   section" and "Next section" and its off switch, which covers character keys, turns them off.
   Every arrow key stays the browser's own scrolling, in the page and in any region that scrolls

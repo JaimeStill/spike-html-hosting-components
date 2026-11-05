@@ -10,7 +10,11 @@
 // a heading a move or a link scrolls to below it and put back as it leaves; no link text breaks
 // inside a word, whatever the page inherits; the progress bar runs on the root's scroll timeline,
 // guarded by @supports; and the tree renders in every profile the foundation's full entry
-// registers, light and dark, at 1280 and 390 px, with no sideways scroll and its focus drawn.
+// registers, light and dark, at 1280 and 390 px, with no sideways scroll and its focus drawn. On
+// test/fixtures/section-tree-short.html, whose sections are shorter than the reading line's
+// distance from the top, L and H visit every stop in order, each move counting from the stop the
+// last one reached, at 1280 and 390 px, instant and smooth; after a reader's scroll the next move
+// counts from the section in view.
 
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
@@ -24,6 +28,9 @@ import { registry as read, resize, runs, type Registry } from "./support/profile
 import { served } from "./support/served.ts";
 
 const FIXTURE = "/test/fixtures/section-tree.html";
+
+/** The page of short sections, whose next heading is past the line when a move lands. */
+const SHORT = "/test/fixtures/section-tree-short.html";
 
 /** The tree's default dock, 70rem, at the initial font size, in px. */
 const DOCK = 1120;
@@ -563,6 +570,150 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       assert.equal(shown.links.every(Boolean), true);
       assert.equal(shown.padding, "");
     });
+  });
+
+  describe("on a page of short sections", () => {
+    /** Loads the short sections' fixture at the viewport's width and motion, rendered. */
+    async function short({ width, reduce }: { width: number; reduce: boolean }) {
+      await resize(page, width);
+      await motion(page, reduce ? "reduce" : "no-preference");
+      await page.goto(`${server.origin}${SHORT}`);
+      await page.evaluate(`window.ready.then(() => ${SETTLED})`);
+    }
+
+    /**
+     * Where a move to stop `index` rests the root's scroll, -1 the top: the heading at the
+     * viewport's top, less its scroll margin and the root's scroll padding, within the root's
+     * scroll range.
+     */
+    const rest = (index: number): Promise<number> =>
+      page.evaluate(`(() => {
+        if (${index} === -1) return 0;
+        const root = document.documentElement;
+        const heading = ${HEADINGS}[${index}];
+        const margin = parseFloat(getComputedStyle(heading).scrollMarginBlockStart) || 0;
+        const padding = parseFloat(getComputedStyle(root).scrollPaddingBlockStart) || 0;
+        const top = heading.getBoundingClientRect().top + scrollY - margin - padding;
+        return Math.min(Math.max(top, 0), root.scrollHeight - root.clientHeight);
+      })()`);
+
+    /** The section the reading line marks, a third of the way down: -1 at the top or above it. */
+    const atLine = (): Promise<number> =>
+      page.evaluate(`scrollY < 1 ? -1 : ${HEADINGS}.findLastIndex(
+        (heading) => heading.getBoundingClientRect().top <= innerHeight * 0.34 + 1)`);
+
+    /** Presses `key`, then waits for the page to rest at stop `index`, and a frame past it. */
+    async function move(key: "h" | "l", index: number): Promise<void> {
+      const want = await rest(index);
+      await press(page, key);
+      await until(page, `Math.abs(scrollY - ${want}) <= 1`);
+      await still(page);
+      await page.evaluate(SETTLED);
+    }
+
+    for (const width of [1280, 390]) {
+      test(`the fixture's sections are short and its last can't reach the top, at ${width}px`, async () => {
+        await short({ width, reduce: true });
+        const count: number = await page.evaluate(`${LINKS}.length`);
+        // From the first heading at the top, the second is already past the reading line.
+        await page.evaluate(
+          `${HEADINGS}[0].scrollIntoView({ block: "start", behavior: "instant" })`,
+        );
+        await still(page);
+        assert.ok(
+          (await headingTop(page, 1)) < (await page.evaluate("innerHeight * 0.34")),
+          "the second heading is above the line",
+        );
+        await page.evaluate(
+          `${HEADINGS}[${count - 1}].scrollIntoView({ block: "start", behavior: "instant" })`,
+        );
+        await still(page);
+        assert.ok((await headingTop(page, count - 1)) > 50, "the last heading stays below the top");
+      });
+
+      for (const reduce of [true, false]) {
+        const named = `at ${width}px${reduce ? "" : ", scrolling smoothly"}`;
+
+        test(`L from the top visits every stop in order, then wraps to the top, ${named}`, async () => {
+          await short({ width, reduce });
+          const count: number = await page.evaluate(`${LINKS}.length`);
+          for (let i = 0; i < count; i++) {
+            await move("l", i);
+            assert.deepEqual(await current(page), { index: i, marked: 1 }, `L to ${i}`);
+            if (i < count - 1) {
+              const top = await headingTop(page, i);
+              const bottom = width < DOCK ? await treeBottom(page) : 0;
+              assert.ok(
+                Math.abs(top - bottom) <= 2,
+                `heading ${i} at ${top}, the top at ${bottom}`,
+              );
+            }
+          }
+          await move("l", -1);
+          assert.equal(await page.evaluate("scrollY"), 0, "past the last, the page is at its top");
+          assert.deepEqual(await current(page), { index: -1, marked: 0 }, "past the last");
+          await move("l", 0);
+          assert.deepEqual(await current(page), { index: 0, marked: 1 }, "and round to the first");
+        });
+
+        test(`H from the top visits every stop in reverse, then wraps to the top, ${named}`, async () => {
+          await short({ width, reduce });
+          const count: number = await page.evaluate(`${LINKS}.length`);
+          for (let i = count - 1; i >= 0; i--) {
+            await move("h", i);
+            assert.deepEqual(await current(page), { index: i, marked: 1 }, `H to ${i}`);
+          }
+          await move("h", -1);
+          assert.equal(
+            await page.evaluate("scrollY"),
+            0,
+            "before the first, the page is at its top",
+          );
+          assert.deepEqual(await current(page), { index: -1, marked: 0 });
+          await move("h", count - 1);
+          assert.deepEqual(
+            await current(page),
+            { index: count - 1, marked: 1 },
+            "round to the last",
+          );
+        });
+      }
+
+      test(`after a reader's scroll, the next move counts from the section in view, at ${width}px`, async () => {
+        await short({ width, reduce: true });
+        for (let i = 0; i < 3; i++) await move("l", i);
+        // The wheel, over the article.
+        await page.cdp("Input.dispatchMouseEvent", {
+          type: "mouseWheel",
+          x: width / 2,
+          y: 400,
+          deltaX: 0,
+          deltaY: 1200,
+        });
+        await until(page, `scrollY > ${await rest(2)} + 100`);
+        await still(page);
+        await page.evaluate(SETTLED);
+        const wheeled = await atLine();
+        assert.ok(wheeled > 2, `the wheel took the line past the move's target, to ${wheeled}`);
+        assert.deepEqual(await current(page), { index: wheeled, marked: 1 }, "the mark follows");
+        await move("l", wheeled + 1);
+        assert.deepEqual(
+          await current(page),
+          { index: wheeled + 1, marked: 1 },
+          "L counts from it",
+        );
+        // A link, back up the page, to a short section whose next heading is past the line.
+        await page.evaluate(`location.hash = ${LINKS}[1].hash`);
+        await until(page, `Math.abs(${HEADINGS}[1].getBoundingClientRect().top) < 200`);
+        await still(page);
+        await page.evaluate(SETTLED);
+        const linked = await atLine();
+        assert.ok(linked >= 1 && linked < wheeled, `the link took the line to ${linked}`);
+        assert.deepEqual(await current(page), { index: linked, marked: 1 }, "the mark follows");
+        await move("h", linked - 1);
+        assert.deepEqual(await current(page), { index: linked - 1, marked: 1 }, "H counts from it");
+      });
+    }
   });
 
   describe("the link text", () => {

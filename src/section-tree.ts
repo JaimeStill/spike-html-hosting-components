@@ -100,7 +100,12 @@ const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
  * H and L move to the previous and the next stop: the top of the page, then each section in tree
  * order, wrapping. L from the top goes to the first section and past the last back to the top; H
  * from the top goes to the last section and from the first to the top. A move to a section
- * scrolls its heading to the top of the viewport, and one to the top scrolls the root to 0. They
+ * scrolls its heading to the top of the viewport, and one to the top scrolls the root to 0. The
+ * stop a move reaches is its target: marked while the page rests where the move left it, whatever
+ * the reading line would mark there, as at a section shorter than the line's distance from the
+ * top or one the page can't scroll to the line, and the stop the next move counts from. Once the
+ * reader scrolls by other means, the wheel, the keyboard, a link, or the scrollbar, the mark
+ * follows the reading line again and the next move counts from the section in view. H and L
  * are bound by register() in the foundation's keys module, so its help dialog lists them and its
  * off switch, which covers character keys, turns them off. Every arrow key stays the browser's
  * own scrolling, in the page and in any region that scrolls sideways: the keys module cancels each
@@ -151,11 +156,16 @@ export class SectionTree extends LitElement {
   #observer: IntersectionObserver | null = null;
   #unregister: (() => void)[] = [];
   /**
-   * The section a move scrolled to, held as the one in view until the next scroll ends: the
-   * observer's calls during a smooth scroll leave it, and a heading the page can't scroll to the
-   * line, near its end, stays marked while it is on screen.
+   * The stop the last move reached, held as the one in view, so the next move counts from it,
+   * until the reader scrolls the page by other means: whatever the observer would mark there, a
+   * short section whose next heading is already past the line, or one the page can't scroll to
+   * the line, near its end. Null while the observer's rule holds.
    */
-  #pinned: number | null = null;
+  #target: number | null = null;
+  /** The root's scroll position the last move rests at, while a move's target is held. */
+  #rest = 0;
+  /** Whether a move's smooth scroll is under way: its scroll events are its own until it ends. */
+  #moving = false;
   // The mode is a custom state, docked or bar, which the page may style.
   readonly #internals = this.attachInternals();
   #query: MediaQueryList | null = null;
@@ -181,6 +191,7 @@ export class SectionTree extends LitElement {
       register(PREVIOUS_KEYS, PREVIOUS_LABEL, () => this.#move(-1)),
       register(NEXT_KEYS, NEXT_LABEL, () => this.#move(1)),
     ];
+    document.addEventListener("scroll", this.#scrolled, { passive: true });
     document.addEventListener("scrollend", this.#settle);
     // aria-keyshortcuts follows the keys setting. The keys module keeps it current on data-keys
     // elements alone, which it finds in the document and never in a shadow root, so the element
@@ -197,6 +208,7 @@ export class SectionTree extends LitElement {
     super.disconnectedCallback();
     for (const unregister of this.#unregister) unregister();
     this.#unregister = [];
+    document.removeEventListener("scroll", this.#scrolled);
     document.removeEventListener("scrollend", this.#settle);
     document.removeEventListener("change", this.#refresh);
     removeEventListener("storage", this.#refresh);
@@ -297,7 +309,7 @@ export class SectionTree extends LitElement {
     }
     this.#sections = sections;
     this._count = sections.length;
-    this.#pinned = null;
+    this.#release();
     this.#observer?.disconnect();
     this.#observer = new IntersectionObserver(this.#follow, {
       rootMargin: `0px 0px ${-Math.round((1 - LINE) * 100)}% 0px`,
@@ -322,23 +334,67 @@ export class SectionTree extends LitElement {
 
   /** The observer's call: the section in view follows the scroll, unless a move holds one. */
   #follow = (): void => {
-    if (this.#pinned === null) this.#mark(this.#atLine());
+    if (this.#target === null) this.#mark(this.#atLine());
+  };
+
+  /** Drops a move's target, so the observer's rule holds again. */
+  #release(): void {
+    this.#target = null;
+    this.#moving = false;
+  }
+
+  /** Whether the root is scrolled away from where the last move rests. */
+  #away(): boolean {
+    return Math.abs(document.documentElement.scrollTop - this.#rest) > 1;
+  }
+
+  /**
+   * A scroll: one away from where a move rests, and no move's own smooth scroll, is the reader's,
+   * by the wheel, the keyboard, a link, or the scrollbar, so the section at the line is in view
+   * again and the next move counts from it. A move's instant scroll lands at its rest, so its
+   * scroll event, which follows a frame later, is no reader's.
+   */
+  #scrolled = (): void => {
+    if (this.#target === null || this.#moving || !this.#away()) return;
+    this.#release();
+    this.#mark(this.#atLine());
   };
 
   /**
-   * A scroll's end: a move's section stays in view while its heading is on screen and the line
-   * hasn't reached it; else the section at the line is in view.
+   * A scroll's end: a move's scroll, smooth or instant, that came to its rest leaves the target
+   * held; else the section at the line is in view, the target released if the reader took the
+   * move's scroll elsewhere on the way. The observer calls only as a heading crosses the line or
+   * the viewport's top, so a scroll off the page's top that moves no heading across either, as
+   * from the top to a first heading already above the line, is marked here.
    */
   #settle = (): void => {
-    const at = this.#atLine();
-    const pinned = this.#pinned;
-    if (pinned !== null && pinned !== TOP) {
-      const { top } = this.#sections[pinned].heading.getBoundingClientRect();
-      if (at < pinned && top >= 0 && top < innerHeight) return;
+    if (this.#target !== null) {
+      const landed = document.documentElement.scrollTop;
+      // A smooth scroll lands within a device pixel of its computed rest, which the rest then
+      // takes, so no rounding of a fractional scale reads as the reader's scroll.
+      if (this.#moving && Math.abs(landed - this.#rest) <= 2) this.#rest = landed;
+      this.#moving = false;
+      if (!this.#away()) return;
+      this.#release();
     }
-    this.#pinned = null;
-    this.#mark(at);
+    this.#mark(this.#atLine());
   };
+
+  /**
+   * Where a move to `index` rests the root's scroll: 0 for the top; for a section, its heading at
+   * the viewport's top, less its scroll margin and the root's scroll padding, as scrollIntoView
+   * lands it, within the root's scroll range, so a heading the page can't scroll that far rests
+   * at the range's end.
+   */
+  #destination(index: number): number {
+    if (index === TOP) return 0;
+    const root = document.documentElement;
+    const { heading } = this.#sections[index];
+    const margin = parseFloat(getComputedStyle(heading).scrollMarginBlockStart) || 0;
+    const padding = parseFloat(getComputedStyle(root).scrollPaddingBlockStart) || 0;
+    const top = heading.getBoundingClientRect().top + root.scrollTop - margin - padding;
+    return Math.min(Math.max(top, 0), root.scrollHeight - root.clientHeight);
+  }
 
   /** Marks the section's link with aria-current, and no other link of the tree. */
   #mark(index: number): void {
@@ -352,7 +408,8 @@ export class SectionTree extends LitElement {
   /**
    * Moves `step` stops from the one in view, around the ring of the page's top and each section:
    * a section's heading scrolled to the top of the viewport, below the root's scroll padding, or
-   * the root scrolled to 0; the stop marked, and held until the scroll ends.
+   * the root scrolled to 0. The stop is the target, marked and held, so the next move counts from
+   * it, until the reader scrolls the page.
    */
   #move(step: number): void {
     const stops = this.#sections.length + 1;
@@ -361,11 +418,17 @@ export class SectionTree extends LitElement {
     // with it the root's scroll padding, is read from it first, as sl-drawer's show() reads it.
     this.#change();
     const index = ((((this._index - TOP + step) % stops) + stops) % stops) + TOP;
-    this.#pinned = index;
+    this.#target = index;
     this.#mark(index);
-    const behavior = reduced() ? "instant" : "smooth";
+    const smooth = !reduced();
+    this.#rest = this.#destination(index);
+    const behavior = smooth ? "smooth" : "instant";
     if (index === TOP) scrollTo({ top: 0, behavior });
     else this.#sections[index].heading.scrollIntoView({ block: "start", behavior });
+    // An instant scroll has landed already, and its rest is where it landed; a smooth one runs
+    // until its scrollend, unless the root is at its rest already and it scrolls nowhere.
+    if (smooth) this.#moving = this.#away();
+    else this.#rest = document.documentElement.scrollTop;
   }
 }
 

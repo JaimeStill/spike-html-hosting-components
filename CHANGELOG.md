@@ -6,6 +6,18 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the packag
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-05
+
+### Fixed
+
+- `sl-section-tree`'s H and L no longer skip a section or stall on a page of short sections. A
+  move's stop is its target: marked while the page rests where the move left it, and the stop the
+  next move counts from, where at the end of the move's scroll the tree dropped it for the section
+  at the reading line, the next one whenever the stop was shorter than the line's distance from
+  the top. Once the reader scrolls by other means, the wheel, the keyboard, a link, or the
+  scrollbar, the mark follows the reading line again and the next move counts from the section in
+  view.
+
 ## [0.2.0] - 2026-11-05
 
 ### Added
