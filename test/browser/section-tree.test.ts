@@ -13,7 +13,8 @@
 // registers, light and dark, at 1280 and 390 px, with no sideways scroll and its focus drawn. On
 // test/fixtures/section-tree-short.html, whose sections are shorter than the reading line's
 // distance from the top, L and H visit every stop in order, each move counting from the stop the
-// last one reached, at 1280 and 390 px, instant and smooth; after a reader's scroll the next move
+// last one reached, at 1280 and 390 px, instant and smooth, and with a smooth move's scroll cut
+// short by the next; the mark follows a reader's scroll as it happens, and after it the next move
 // counts from the section in view.
 
 import assert from "node:assert/strict";
@@ -123,16 +124,23 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
     await server?.stop();
   });
 
-  /** Loads the fixture at the viewport's size and motion, its keys settings cleared, rendered. */
+  /**
+   * Loads a fixture, section-tree.html by default, at the viewport's size and motion, its keys
+   * settings cleared, rendered.
+   */
   async function load(
-    { width = 1280, reduce = true }: { width?: number; reduce?: boolean } = {},
+    {
+      width = 1280,
+      reduce = true,
+      fixture = FIXTURE,
+    }: { width?: number; reduce?: boolean; fixture?: string } = {},
     query = "",
   ) {
     await resize(page, width);
     await motion(page, reduce ? "reduce" : "no-preference");
-    await page.goto(`${server.origin}${FIXTURE}${query}`);
+    await page.goto(`${server.origin}${fixture}${query}`);
     await page.evaluate(`localStorage.clear()`);
-    await page.goto(`${server.origin}${FIXTURE}${query}`);
+    await page.goto(`${server.origin}${fixture}${query}`);
     await page.evaluate(`window.ready.then(() => ${SETTLED})`);
   }
 
@@ -573,13 +581,9 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
   });
 
   describe("on a page of short sections", () => {
-    /** Loads the short sections' fixture at the viewport's width and motion, rendered. */
-    async function short({ width, reduce }: { width: number; reduce: boolean }) {
-      await resize(page, width);
-      await motion(page, reduce ? "reduce" : "no-preference");
-      await page.goto(`${server.origin}${SHORT}`);
-      await page.evaluate(`window.ready.then(() => ${SETTLED})`);
-    }
+    /** Loads the short sections' fixture at the viewport's width and motion, as load() does. */
+    const short = ({ width, reduce }: { width: number; reduce: boolean }) =>
+      load({ width, reduce, fixture: SHORT });
 
     /**
      * Where a move to stop `index` rests the root's scroll, -1 the top: the heading at the
@@ -678,6 +682,38 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
           );
         });
       }
+
+      test(`L pressed again before a smooth move ends counts from that move's stop, at ${width}px`, async () => {
+        await short({ width, reduce: false });
+        const want = await rest(3);
+        // Four presses, each before the last one's smooth scroll has ended.
+        for (let i = 0; i < 4; i++) await press(page, "l");
+        await until(page, `Math.abs(scrollY - ${want}) <= 1`);
+        await still(page);
+        await page.evaluate(SETTLED);
+        assert.deepEqual(await current(page), { index: 3, marked: 1 }, "four Ls from the top");
+      });
+
+      test(`the mark follows a reader's scroll as it happens, before the scroll ends, at ${width}px`, async () => {
+        await short({ width, reduce: true });
+        for (let i = 0; i < 3; i++) await move("l", i);
+        // Read at the scroll's own event, which reaches the window after the document's listeners
+        // and before scrollend or any observer's call.
+        const seen: { scrolled: number; line: number } =
+          await page.evaluate(`new Promise((resolve) => {
+          addEventListener("scroll", () => resolve({
+            scrolled: ${LINKS}.findIndex((a) => a.getAttribute("aria-current") === "location"),
+            line: ${HEADINGS}.findLastIndex(
+              (heading) => heading.getBoundingClientRect().top <= innerHeight * 0.34 + 1),
+          }), { once: true });
+          scrollBy({ top: 1200, behavior: "instant" });
+        })`);
+        assert.ok(
+          seen.line > 2,
+          `the scroll took the line past the move's target, to ${seen.line}`,
+        );
+        assert.equal(seen.scrolled, seen.line, "the mark is the line's at the scroll's event");
+      });
 
       test(`after a reader's scroll, the next move counts from the section in view, at ${width}px`, async () => {
         await short({ width, reduce: true });
