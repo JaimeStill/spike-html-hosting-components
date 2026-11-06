@@ -68,6 +68,7 @@ const LISTS = {
   org: "/spike-html-hosting/sites.json",
   older: "/spike-html-hosting/older.json",
   malformed: "/spike-html-hosting/malformed.json",
+  empty: "/spike-html-hosting/empty.json",
   invalid: "/spike-html-hosting/invalid.json",
 };
 
@@ -465,8 +466,8 @@ describe("the site components", { timeout: 180_000 }, () => {
       assert.deepEqual(await page.evaluate("window.errors"), []);
     });
 
-    test("an error status, even with a list, a body that isn't JSON, or a list with an empty label leaves the built list", async () => {
-      for (const list of [`${LISTS.org}?status=500`, LISTS.malformed, LISTS.invalid]) {
+    test("an error status, even with a list, a body that isn't JSON, an empty list, or a list with an empty label leaves the built list", async () => {
+      for (const list of [`${LISTS.org}?status=500`, LISTS.malformed, LISTS.empty, LISTS.invalid]) {
         await visit(`${SQLATE}${src(list)}`);
         await answered(list);
         assert.deepEqual(await listed(), { links: SITES, current: ["sqlate"] }, list);

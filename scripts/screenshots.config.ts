@@ -145,14 +145,24 @@ const site: DescribedState[] = [
   },
 ];
 
-/** Resolves once the site nav lists the fourth site, its src's list fetched. */
+/** The org fixture site's list, which each skewed page's src names. */
+const LIST = "/spike-html-hosting/sites.json";
+
+/**
+ * Resolves once the page has fetched the list and the site nav lists the fourth site. The site
+ * ahead lists it before the fetch too, so the list's own fetch is waited on as well.
+ */
 const fetched: Step = async (page) => {
   await page.evaluate(`(async () => {
     await window.ready;
-    const nav = document.querySelector("sl-site-nav").shadowRoot;
-    while (!nav.querySelector('a[href="/${FOURTH.repository}/"]')) {
+    const element = document.querySelector("sl-site-nav");
+    const nav = element.shadowRoot;
+    const loaded = () =>
+      performance.getEntriesByType("resource").some((entry) => entry.name.endsWith("${LIST}"));
+    while (!loaded() || !nav.querySelector('a[href="/${FOURTH.repository}/"]')) {
       await new Promise((resolve) => requestAnimationFrame(resolve));
     }
+    await element.updateComplete;
   })()`);
 };
 
@@ -162,7 +172,7 @@ const skewed = (name: string, caption: string, site: string): DescribedPage[] =>
   {
     name: `${name}-fetched`,
     caption: `${caption}, its site nav's src the org's list`,
-    path: `${site}/?src=${encodeURIComponent("/spike-html-hosting/sites.json")}`,
+    path: `${site}/?src=${encodeURIComponent(LIST)}`,
     states: [{ full: false, open: fetched }],
   },
 ];

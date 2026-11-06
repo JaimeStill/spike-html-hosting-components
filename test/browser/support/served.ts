@@ -37,7 +37,7 @@ const types: Record<string, string> = {
 };
 
 /** The path of the module a site deployed ahead of the build loads: the built one, ?ahead. */
-export const AHEAD = "/dist/site-nav.js?ahead";
+export const AHEAD_MODULE = "/dist/site-nav.js?ahead";
 
 /** The site a release ahead of the build adds to the site nav's list, last. */
 export const FOURTH = { repository: "spike-html-hosting-fourth", label: "Fourth" };
@@ -78,12 +78,13 @@ export function hold(path: string): () => void {
 }
 
 /**
- * Claims a request for the module AHEAD names, answering with ahead()'s; and a request whose path's
- * first segment names a fixture site, answering with the site's .html or .json file at the rest of
- * the path, a directory's index.html for a path ending in "/", or a 404. A .json request is
- * recorded in requested, waits while its path is held, and with a status query, as ?status=500,
- * is answered with that status, the file still its body. Passes on every other request. A site's
- * pages load their modules and sheets from /deps/ and /dist/, which the server's own routes answer.
+ * Claims a request for the module AHEAD_MODULE names, answering with ahead()'s; and a request
+ * whose path's first segment names a fixture site, answering with the site's .html or .json file
+ * at the rest of the path, a directory's index.html for a path ending in "/", or a 404. A .json
+ * request is recorded in requested, waits while its path is held, and with a status query, as
+ * ?status=500, is answered with that status, the file still its body. Passes on every other
+ * request. A site's pages load their modules and sheets from /deps/ and /dist/, which the server's
+ * own routes answer.
  */
 export const handler: Handler = async (request, response) => {
   let url: URL;
@@ -94,7 +95,7 @@ export const handler: Handler = async (request, response) => {
   } catch {
     return false;
   }
-  if (`${url.pathname}${url.search}` === AHEAD) {
+  if (`${url.pathname}${url.search}` === AHEAD_MODULE) {
     const body = await ahead();
     response
       .writeHead(200, { "content-type": "text/javascript", "cache-control": "no-store" })
@@ -107,12 +108,13 @@ export const handler: Handler = async (request, response) => {
   if (!statSync(join(sites, site)).isDirectory()) return false;
   const file = join(sites, path.endsWith("/") ? `${path}index.html` : path);
   const type = types[extname(file)];
-  if (type === types[".json"]) await held.get(path);
+  const list = extname(file) === ".json";
+  if (list) await held.get(path);
   const body = type === undefined ? undefined : await readFile(file).catch(() => undefined);
   if (body === undefined) response.writeHead(404).end();
   else {
     // A list's status query answers with that status, the list still its body.
-    const status = type === types[".json"] ? Number(url.searchParams.get("status") ?? 200) : 200;
+    const status = list ? Number(url.searchParams.get("status") ?? 200) : 200;
     response.writeHead(status, { "content-type": type, "cache-control": "no-store" }).end(body);
   }
   return true;
