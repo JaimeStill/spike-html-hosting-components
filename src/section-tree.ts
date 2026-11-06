@@ -129,7 +129,7 @@ const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
  * and its off switch, which covers character keys, turns them off. Every arrow key stays the
  * browser's own scrolling, in the page and in any region that scrolls sideways: the keys module
  * cancels each key a binding matches, so the element binds none. The Previous and Next buttons,
- * with the bracketed key hints [H] and [L], move the same way whatever the setting, are disabled
+ * with the key hints H and L, each in a kbd, move the same way whatever the setting, are disabled
  * only when the tree names no section, and carry aria-keyshortcuts while the setting has the keys
  * fire. A move scrolls smoothly unless the reader asks for reduced motion; its scroll ends at its
  * scrollend or, in an engine that fires none, once the page has stood still for a few frames.
@@ -258,8 +258,7 @@ export class SectionTree extends LitElement {
   }
 
   render() {
-    const hint = (key: string) =>
-      html`<span class="hint" aria-hidden="true">[<kbd>${key}</kbd>]</span>`;
+    const hint = (key: string) => html`<span aria-hidden="true"><kbd>${key}</kbd></span>`;
     // aria-keyshortcuts declares a key only while the reader's setting has it fire.
     const shortcut = (keys: string) => (this._keys ? keys : nothing);
     return html`

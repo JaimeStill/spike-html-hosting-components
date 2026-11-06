@@ -348,7 +348,7 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       assert.deepEqual(await current(page), before, "the section in view is unchanged");
     });
 
-    test("the buttons move between the top and the sections, each showing its bracketed key hint", async () => {
+    test("the buttons move between the top and the sections, each showing its key hint", async () => {
       const shown: { text: string; keys: string | null; disabled: boolean }[] =
         await page.evaluate(`[...${SHADOW}.querySelectorAll(".moves button")].map((button) => ({
           text: button.textContent.replace(/\\s+/g, " ").trim(),
@@ -356,8 +356,8 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
           disabled: button.disabled,
         }))`);
       assert.deepEqual(shown, [
-        { text: "Previous [H]", keys: "H", disabled: false },
-        { text: "Next [L]", keys: "L", disabled: false },
+        { text: "Previous H", keys: "H", disabled: false },
+        { text: "Next L", keys: "L", disabled: false },
       ]);
       await page.evaluate(`${SHADOW}.querySelector(".next").click()`);
       await still(page);
@@ -1072,7 +1072,7 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
         }
         assert.deepEqual(
           focused.map(({ name: what }) => what),
-          ["Keyboard shortcuts ?", ...(count > 0 ? ["Install"] : []), "Previous [H]", "Next [L]"],
+          ["Keyboard shortcuts ?", ...(count > 0 ? ["Install"] : []), "Previous H", "Next L"],
           name,
         );
         for (const { name: what, visible, outline } of focused) {

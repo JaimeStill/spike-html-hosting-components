@@ -46,9 +46,6 @@ nav {
   flex-wrap: wrap;
   gap: var(--space-2xs);
 }
-.hint {
-  white-space: nowrap;
-}
 
 /*
  * The reading progress: a track and a bar the page's scroll grows from the inline start, by a

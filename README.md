@@ -91,12 +91,12 @@ GitHub's heading id, with a nested `ul` or `ol` for the `h3`s under it:
   the section in view. H and L are bound by `register()` in the foundation's keys module, so its
   help dialog lists them as "Previous section" and "Next section" and its off switch, which
   covers character keys, turns them off. Every arrow key stays the browser's own scrolling, in the
-  page and in any region that scrolls sideways. The Previous and Next buttons, with the bracketed
-  key hints [H] and [L], move the same way whatever the setting, are disabled only when the tree
-  names no section, and carry `aria-keyshortcuts` while the keys are on. A move scrolls smoothly
-  unless the reader asks for reduced motion; its scroll ends at its `scrollend`, or, in an engine
-  that fires none, as Safari may, once the page has stood still for five frames, or after three
-  seconds at most, whichever comes first.
+  page and in any region that scrolls sideways. The Previous and Next buttons, with the key hints
+  H and L, each in a `<kbd>`, move the same way whatever the setting, are disabled only when the
+  tree names no section, and carry `aria-keyshortcuts` while the keys are on. A move scrolls
+  smoothly unless the reader asks for reduced motion; its scroll ends at its `scrollend`, or, in an
+  engine that fires none, as Safari may, once the page has stood still for five frames, or after
+  three seconds at most, whichever comes first.
 - `dock`, a CSS length, `70rem` by default (exported as `DOCK`), is the width at which the tree is
   a column, and wider: where one 16rem side column fits beside a reading column of 80ch in the
   foundation's default mono type. A site whose layout docks the column elsewhere sets its own,
@@ -232,7 +232,7 @@ a switch between the modes swaps only the shadow root's wrapper around the same 
 
 A site shell holds its site index in a drawer labeled "Pages", and its header holds the opener,
 page markup and the page's script rather than the drawer's: a button labeled "Pages" with the
-bracketed key hint [P], bound to P by the foundation's keys module through `data-keys="p"`, as
+key hint P in a `<kbd>`, bound to P by the foundation's keys module through `data-keys="p"`, as
 the Theme button is bound to T, shown only below the drawer's `dock` and only once the drawer is
 defined, which calls the drawer's `show()` and says through `aria-expanded` whether it is open:
 
@@ -247,7 +247,7 @@ defined, which calls the drawer's `show()` and says through `aria-expanded` whet
     aria-expanded="false"
     data-keys="p"
   >
-    Pages <span aria-hidden="true">[<kbd>P</kbd>]</span>
+    Pages <span aria-hidden="true"><kbd>P</kbd></span>
   </button>
   <button type="button" commandfor="theme" command="--open" data-keys="t">Theme</button>
 </header>
