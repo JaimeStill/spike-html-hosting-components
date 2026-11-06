@@ -6,6 +6,8 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the packag
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-06
+
 ### Added
 
 - The icons layer,
@@ -15,6 +17,8 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the packag
 
 ### Changed
 
+- A site now pins the icons layer too, beside the components and the foundation: the components
+  import it by package name, so a site that installs v0.4.0 without it fails to build.
 - `sl-section-tree`'s Previous and Next buttons show Octicons' `arrow-up-16` and `arrow-down-16`
   with their key hints H and L in a `<kbd>`, the words no longer shown. Their accessible names stay
   "Previous" and "Next", now from their `aria-label`, and the keys help dialog still lists the
