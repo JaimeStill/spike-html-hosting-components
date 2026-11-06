@@ -451,7 +451,7 @@ describe("the site components", { timeout: 180_000 }, () => {
       const after = await drawn();
       assert.deepEqual(
         [after.modal, after.opener.expanded, after.focused],
-        [false, "false", "Pages [P]"],
+        [false, "false", "Pages P"],
       );
     });
 
@@ -465,7 +465,7 @@ describe("the site components", { timeout: 180_000 }, () => {
       const after = await drawn();
       assert.deepEqual(
         [after.modal, after.opener.expanded, after.focused],
-        [false, "false", "Pages [P]"],
+        [false, "false", "Pages P"],
       );
     });
   });
@@ -540,7 +540,7 @@ describe("the site components", { timeout: 180_000 }, () => {
         assert.deepEqual(
           focused.map(({ name: what }) => what),
           width < DOCK
-            ? ["Org", "Architecture", "sqlate", "Pages [P]", "Theme"]
+            ? ["Org", "Architecture", "sqlate", "Pages P", "Theme"]
             : ["Org", "Architecture", "sqlate", "Theme", "The architecture stand-in"],
           name,
         );

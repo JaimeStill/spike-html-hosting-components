@@ -6,6 +6,15 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the packag
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-05
+
+### Changed
+
+- `sl-section-tree`'s Previous and Next buttons show their key hints H and L in a `<kbd>` alone,
+  with no brackets around them, so the buttons read "Previous H" and "Next L": the `<kbd>` already
+  reads as a shortcut. The site shell's Pages opener, in the README's snippet, does the same, its
+  hint P in a `<kbd>` alone.
+
 ## [0.2.1] - 2026-11-05
 
 ### Fixed
