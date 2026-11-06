@@ -3,23 +3,24 @@
 // bar, and the progress bar. With no script the list renders and its links jump, wide and narrow;
 // no link is marked at the page's top, and aria-current follows the scroll; L and H cycle through
 // the top and the sections, wrapping either way, which the keys help dialog lists, and do nothing
-// with the keys turned off, while every arrow stays the browser's scrolling, in the page and in a
-// region that scrolls sideways; a move is smooth unless the reader asks for reduced motion; below
-// dock, exactly, for the default and a px dock, and never for a length the query can't read, the
-// tree is a bar stuck to the viewport's top, its links hidden, the root's scroll padding keeping
-// a heading a move or a link scrolls to below it and put back as it leaves; no link text breaks
-// inside a word, whatever the page inherits; the progress bar runs on the root's scroll timeline,
-// guarded by @supports; and the tree renders in every profile the foundation's full entry
-// registers, light and dark, at 1280 and 390 px, with no sideways scroll and its focus drawn. On
-// test/fixtures/section-tree-short.html, whose sections are shorter than the reading line's
-// distance from the top, L and H visit every stop in order, each move counting from the stop the
-// last one reached, at 1280 and 390 px, instant and smooth, and with a smooth move's scroll cut
-// short by the next, and with no scrollend, as an engine may fire none, the moves still cycle and
-// a reader's scroll still takes the mark; the mark follows a reader's scroll as it happens, and
-// after it the next move counts from the section in view; and a link followed to a listed section
-// holds it as a move would, a tree link clicked or entered at 1280 px, the fragment already in the
-// URL included, and a fragment changed by a script or a link elsewhere on the page at 1280 and
-// 390 px, where the tree's links are hidden in the bar.
+// with the keys turned off; the Previous and Next buttons, so named, show the arrow-up-16 and
+// arrow-down-16 glyphs and their key hints alone, and move the same way; every arrow stays the
+// browser's scrolling, in the page and in a region that scrolls sideways; a move is smooth unless
+// the reader asks for reduced motion; below dock, exactly, for the default and a px dock, and
+// never for a length the query can't read, the tree is a bar stuck to the viewport's top, its
+// links hidden, the root's scroll padding keeping a heading a move or a link scrolls to below it
+// and put back as it leaves; no link text breaks inside a word, whatever the page inherits; the
+// progress bar runs on the root's scroll timeline, guarded by @supports; and the tree renders in
+// every profile the foundation's full entry registers, light and dark, at 1280 and 390 px, with no
+// sideways scroll, its glyphs drawn, and its focus drawn. On test/fixtures/section-tree-short.html,
+// whose sections are shorter than the reading line's distance from the top, L and H visit every
+// stop in order, each move counting from the stop the last one reached, at 1280 and 390 px, instant
+// and smooth, and with a smooth move's scroll cut short by the next, and with no scrollend, as an
+// engine may fire none, the moves still cycle and a reader's scroll still takes the mark; the mark
+// follows a reader's scroll as it happens, and after it the next move counts from the section in
+// view; and a link followed to a listed section holds it as a move would, a tree link clicked or
+// entered at 1280 px, the fragment already in the URL included, and a fragment changed by a script
+// or a link elsewhere on the page at 1280 and 390 px, where the tree's links are hidden in the bar.
 
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
@@ -29,6 +30,10 @@ import type { Browser, Page } from "@jaimestill/spike-html-apps-tooling/browser.
 import { serve } from "@jaimestill/spike-html-apps-tooling/server.js";
 import type { Server } from "@jaimestill/spike-html-apps-tooling/server.js";
 
+import down from "@jaimestill/spike-html-hosting-icons/octicon/arrow-down-16";
+import up from "@jaimestill/spike-html-hosting-icons/octicon/arrow-up-16";
+
+import { assertGlyph, exposed, glyph } from "./support/glyphs.ts";
 import { registry as read, resize, runs, type Registry } from "./support/profiles.ts";
 import { served } from "./support/served.ts";
 
@@ -348,17 +353,26 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       assert.deepEqual(await current(page), before, "the section in view is unchanged");
     });
 
-    test("the buttons move between the top and the sections, each showing its key hint", async () => {
-      const shown: { text: string; keys: string | null; disabled: boolean }[] =
+    test("the buttons, named Previous and Next, show their glyphs and key hints alone, and move between the top and the sections", async () => {
+      const shown: { text: string; hint: boolean; keys: string | null; disabled: boolean }[] =
         await page.evaluate(`[...${SHADOW}.querySelectorAll(".moves button")].map((button) => ({
           text: button.textContent.replace(/\\s+/g, " ").trim(),
+          hint: button.querySelector("kbd").checkVisibility(),
           keys: button.getAttribute("aria-keyshortcuts"),
           disabled: button.disabled,
         }))`);
+      // The visible text is the key hint alone: the glyph stands for the word.
       assert.deepEqual(shown, [
-        { text: "Previous H", keys: "H", disabled: false },
-        { text: "Next L", keys: "L", disabled: false },
+        { text: "H", hint: true, keys: "H", disabled: false },
+        { text: "L", hint: true, keys: "L", disabled: false },
       ]);
+      assertGlyph(await glyph(page, `${SHADOW}.querySelector(".previous")`, up), "Previous");
+      assertGlyph(await glyph(page, `${SHADOW}.querySelector(".next")`, down), "Next");
+      const names = await exposed(page, "button");
+      assert.ok(
+        names.includes("Previous") && names.includes("Next"),
+        `the buttons' names: ${JSON.stringify(names)}`,
+      );
       await page.evaluate(`${SHADOW}.querySelector(".next").click()`);
       await still(page);
       assert.deepEqual(await current(page), { index: 0, marked: 1 });
@@ -1019,7 +1033,7 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       assert.ok(registry.type.length >= 2, JSON.stringify(registry));
     });
 
-    test("renders with no sideways scroll and its focus drawn, light and dark, wide and narrow", async () => {
+    test("renders with no sideways scroll, its glyphs drawn, and its focus drawn, light and dark, wide and narrow", async () => {
       for (const run of runs(registry)) {
         const name = JSON.stringify(run);
         const { width, ...profile } = run;
@@ -1045,6 +1059,13 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
         assert.ok(shown.tree.height > 0 && shown.tree.left >= 0, `${name}: the tree renders`);
         assert.ok(shown.tree.right <= shown.clientWidth, `${name}: the tree fits the viewport`);
         assert.ok(shown.scrollWidth <= shown.clientWidth, `${name}: no sideways scroll`);
+        for (const [button, markup] of [
+          ["previous", up],
+          ["next", down],
+        ]) {
+          const drawn = await glyph(page, `${SHADOW}.querySelector(".${button}")`, markup);
+          assertGlyph(drawn, `${name}: ${button}`);
+        }
 
         // The keyboard reaches the help button, then, in the column, the first link and past the
         // links the Previous and Next buttons; as the bar, whose links are hidden, the buttons
@@ -1063,7 +1084,7 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
               while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
               const style = getComputedStyle(el);
               return {
-                name: el.textContent.replace(/\\s+/g, " ").trim(),
+                name: el.getAttribute("aria-label") ?? el.textContent.replace(/\\s+/g, " ").trim(),
                 visible: el.matches(":focus-visible"),
                 outline: style.outlineStyle + " " + parseFloat(style.outlineWidth),
               };
@@ -1072,7 +1093,7 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
         }
         assert.deepEqual(
           focused.map(({ name: what }) => what),
-          ["Keyboard shortcuts ?", ...(count > 0 ? ["Install"] : []), "Previous H", "Next L"],
+          ["Keyboard shortcuts ?", ...(count > 0 ? ["Install"] : []), "Previous", "Next"],
           name,
         );
         for (const { name: what, visible, outline } of focused) {

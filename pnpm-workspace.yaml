@@ -1,7 +1,7 @@
 # pnpm's settings for the install (mise run install); the repository is one package, so it lists
-# no packages. The foundation, a peer, and the tooling, each a github: devDependency installed at
-# its release tag, need no setting here: pnpm guards only a git dependency below the top level
-# (blockExoticSubdeps).
+# no packages. The foundation and the icons, peers, and the tooling, each a github: devDependency
+# installed at its release tag, need no setting here: pnpm guards only a git dependency below the
+# top level (blockExoticSubdeps).
 # Adapted from spike-html-apps-components (51d2b92): pnpm-workspace.yaml.
 #
 # unrs-resolver, under eslint-plugin-import-x and eslint-import-resolver-typescript, has a

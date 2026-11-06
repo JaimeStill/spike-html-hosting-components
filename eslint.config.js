@@ -34,11 +34,15 @@ const cssImports = [
   })),
 ];
 
-// The layer table cut to the components: their sources, which may import themselves and two
-// packages by name, lit and the foundation, which the manifest declares, the foundation as a peer;
-// the foundation is reached only through its install, as a consumer reaches it.
+// The layer table cut to the components: their sources, which may import themselves and three
+// packages by name, lit, the foundation, and the icons layer, which the manifest declares, the
+// foundation and the icons as peers; each peer is reached only through its install, as a consumer
+// reaches it.
 const foundation = "@jaimestill/spike-html-apps-foundation";
-export const layers = [{ name: "components", path: "src", may: ["components", "lit", foundation] }];
+const icons = "@jaimestill/spike-html-hosting-icons";
+export const layers = [
+  { name: "components", path: "src", may: ["components", "lit", foundation, icons] },
+];
 
 // The layer is an element by its directory, matched from the root (partialMatch false), with a
 // second pattern for a file in a directory whose name starts with a dot, which micromatch's **
@@ -100,10 +104,10 @@ export default defineConfig([
     rules: {
       "import-x/no-unresolved": "error",
       // Each judges an import against package.json: a package name it doesn't declare in
-      // dependencies or peerDependencies, where the foundation is (a devDependency alone ships
-      // nothing, and includeInternal holds the package's own name, which resolves inside it, to
-      // the same), in every import form (includeTypes), and a relative path that reaches another
-      // package's files.
+      // dependencies or peerDependencies, where the foundation and the icons are (a devDependency
+      // alone ships nothing, and includeInternal holds the package's own name, which resolves
+      // inside it, to the same), in every import form (includeTypes), and a relative path that
+      // reaches another package's files.
       "import-x/no-extraneous-dependencies": [
         "error",
         { devDependencies: false, includeInternal: true, includeTypes: true },

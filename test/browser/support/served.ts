@@ -19,10 +19,14 @@ export const root = join(import.meta.dirname, "../../..");
 /**
  * The packages served under /deps/: lit, whose own dependencies (lit-html, lit-element, and
  * @lit/reactive-element) pnpm installs beside it in its store and the server brings with it; and
- * the foundation, the install the components' dist/ imports by name, reached as a consumer
- * reaches it.
+ * the foundation and the icons, the installs the components' dist/ imports by name, each reached
+ * as a consumer reaches it.
  */
-export const deps = ["lit", "@jaimestill/spike-html-apps-foundation"];
+export const deps = [
+  "lit",
+  "@jaimestill/spike-html-apps-foundation",
+  "@jaimestill/spike-html-hosting-icons",
+];
 
 /**
  * The fixture sites' directory: each directory in it is a site, served at /<directory>/ as GitHub
@@ -84,9 +88,8 @@ export function hold(path: string): () => void {
  * request is recorded in requested, waits while its path is held, and with a status query, as
  * ?status=500, is answered with that status, the file still its body; with a fail query, as
  * ?fail, its connection is closed with no response, so the browser's fetch() rejects as it does
- * when the network fails. Passes on every other
- * request. A site's pages load their modules and sheets from /deps/ and /dist/, which the server's
- * own routes answer.
+ * when the network fails. Passes on every other request. A site's pages load their modules and
+ * sheets from /deps/ and /dist/, which the server's own routes answer.
  */
 export const handler: Handler = async (request, response) => {
   let url: URL;

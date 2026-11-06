@@ -17,7 +17,8 @@
  * the inline-start edge and back out unless the reader prefers reduced motion; the slide is a
  * translate, which moves nothing else.
  *
- * From spike-html-apps-components (51d2b92): src/drawer.css.
+ * Adapted from spike-html-apps-components (51d2b92): src/drawer.css, its Close button centering
+ * its glyph.
  */
 
 :host {
@@ -84,7 +85,12 @@ h2 {
   padding: var(--space-s);
   scroll-padding: var(--space-s);
 }
-/* The label in the Close button's name, which takes no space. */
+/* The Close button shows its glyph alone, a block in the reset, centered in the button. */
+header button {
+  display: inline-flex;
+  align-items: center;
+}
+/* The close slot's text and the label, the Close button's name, which take no space. */
 .hidden {
   position: absolute;
   inline-size: 1px;

@@ -5,11 +5,14 @@
 // progress and the moves alone, its links hidden.
 
 import { html, LitElement, nothing, type PropertyDeclarations, type PropertyValues } from "lit";
+import { unsafeHTML } from "lit/directives/unsafe-html.js";
 
 import elements from "@jaimestill/spike-html-apps-foundation/baseline/elements.css" with { type: "css" };
 import reset from "@jaimestill/spike-html-apps-foundation/baseline/reset.css" with { type: "css" };
 import { define } from "@jaimestill/spike-html-apps-foundation/dom.js";
 import { register, settings } from "@jaimestill/spike-html-apps-foundation/keys.js";
+import down from "@jaimestill/spike-html-hosting-icons/octicon/arrow-down-16";
+import up from "@jaimestill/spike-html-hosting-icons/octicon/arrow-up-16";
 import styles from "./section-tree.css" with { type: "css" };
 
 /** The tag the element defines. */
@@ -25,6 +28,10 @@ export const NEXT_KEYS = "l";
 /** The buttons' aria-keyshortcuts for the two bindings, as the keys module writes a letter's. */
 export const PREVIOUS_SHORTCUT = "H";
 export const NEXT_SHORTCUT = "L";
+
+/** The buttons' accessible names, which their glyphs stand for. */
+export const PREVIOUS_NAME = "Previous";
+export const NEXT_NAME = "Next";
 
 /** The labels the keys help dialog lists the two bindings by. */
 export const PREVIOUS_LABEL = "Previous section";
@@ -128,11 +135,14 @@ const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
  * and L are bound by register() in the foundation's keys module, so its help dialog lists them
  * and its off switch, which covers character keys, turns them off. Every arrow key stays the
  * browser's own scrolling, in the page and in any region that scrolls sideways: the keys module
- * cancels each key a binding matches, so the element binds none. The Previous and Next buttons,
- * with the key hints H and L, each in a kbd, move the same way whatever the setting, are disabled
- * only when the tree names no section, and carry aria-keyshortcuts while the setting has the keys
- * fire. A move scrolls smoothly unless the reader asks for reduced motion; its scroll ends at its
- * scrollend or, in an engine that fires none, once the page has stood still for a few frames.
+ * cancels each key a binding matches, so the element binds none. The Previous and Next buttons
+ * show Octicons' arrow-up-16 and arrow-down-16, from the icons layer, with the key hints H and L,
+ * each in a kbd, and are named "Previous" and "Next" by their aria-label, while the help dialog
+ * lists the bindings as "Previous section" and "Next section". They move the same way whatever
+ * the setting, are disabled only when the tree names no section, and carry aria-keyshortcuts while
+ * the setting has the keys fire. A move scrolls smoothly unless the reader asks for reduced
+ * motion; its scroll ends at its scrollend or, in an engine that fires none, once the page has
+ * stood still for a few frames.
  *
  * At `dock`, a CSS length (DOCK, 70rem, by default), and wider, the tree is a column: the
  * progress, the links, and the buttons. Below it the tree is a bar stuck to the top of the
@@ -259,6 +269,9 @@ export class SectionTree extends LitElement {
 
   render() {
     const hint = (key: string) => html`<span aria-hidden="true"><kbd>${key}</kbd></span>`;
+    // Each button shows its glyph and its key hint, both hidden from the accessibility tree, and
+    // is named by its aria-label. The glyph is the icons layer's svg string, a constant, which
+    // unsafeHTML parses once into the button and leaves as it is on every later render.
     // aria-keyshortcuts declares a key only while the reader's setting has it fire.
     const shortcut = (keys: string) => (this._keys ? keys : nothing);
     return html`
@@ -269,20 +282,22 @@ export class SectionTree extends LitElement {
           <button
             type="button"
             class="previous"
+            aria-label=${PREVIOUS_NAME}
             aria-keyshortcuts=${shortcut(PREVIOUS_SHORTCUT)}
             ?disabled=${this._count === 0}
             @click=${() => this.#move(-1)}
           >
-            Previous ${hint(PREVIOUS_SHORTCUT)}
+            ${unsafeHTML(up)} ${hint(PREVIOUS_SHORTCUT)}
           </button>
           <button
             type="button"
             class="next"
+            aria-label=${NEXT_NAME}
             aria-keyshortcuts=${shortcut(NEXT_SHORTCUT)}
             ?disabled=${this._count === 0}
             @click=${() => this.#move(1)}
           >
-            Next ${hint(NEXT_SHORTCUT)}
+            ${unsafeHTML(down)} ${hint(NEXT_SHORTCUT)}
           </button>
         </div>
       </nav>

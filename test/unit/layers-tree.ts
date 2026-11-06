@@ -27,6 +27,11 @@ const foundationManifest = readFileSync(
   "utf8",
 );
 
+/** The icons layer, the other peer, as its install lays it out: its manifest beside the module
+ * the cases name. */
+const icons = "@jaimestill/spike-html-hosting-icons";
+const iconsManifest = readFileSync(join(root, "node_modules", icons, "package.json"), "utf8");
+
 /** The sibling layer, the SDK, and spike-html-hosting's root site, which the components never
  * import. */
 const sdk = components.replace(/components$/, "sdk");
@@ -67,12 +72,15 @@ function by(rules: string[], files: Record<string, string>): Record<string, Case
 /** The foundation's installed files, from the layer's src/. */
 const installed = `../node_modules/${foundation}`;
 
+/** The icons' installed files, from the layer's src/. */
+const iconsInstalled = `../node_modules/${icons}`;
+
 // Each file holds one import, named for what it imports.
 export const violations = {
-  // A package the manifest doesn't declare, by name: the table allows lit and the foundation
-  // alone. lit-html, which lit depends on, is installed beside it; the SDK, the sibling layer, is
-  // another layer's, and the root site sits above every layer; a devDependency ships nothing; and
-  // the package's own name resolves to its build, not its src/.
+  // A package the manifest doesn't declare, by name: the table allows lit, the foundation, and the
+  // icons alone. lit-html, which lit depends on, is installed beside it; the SDK, the sibling
+  // layer, is another layer's, and the root site sits above every layer; a devDependency ships
+  // nothing; and the package's own name resolves to its build, not its src/.
   ...by([table, extraneous], {
     "src/sdk.ts": `import { Client } from "${sdk}/client.js";`,
     ...forms("src/forms/sdk", `${sdk}/client.js`),
@@ -83,11 +91,13 @@ export const violations = {
     ...forms("src/forms/self-name", `${components}/section-tree.js`),
   }),
   // A declared package by a relative path into node_modules/: the foundation's installed files,
-  // its build and its sheets, and lit's.
+  // its build and its sheets, the icons', and lit's.
   ...by([table, relativePackages], {
     "src/foundation-path.ts": `import { define } from "${installed}/dist/dom.js";`,
     ...forms("src/forms/foundation-path", `../${installed}/dist/dom.js`),
     "src/foundation-sheet-path.ts": `import sheet from "${installed}/dist/baseline/reset.css" with { type: "css" };`,
+    "src/icons-path.ts": `import x from "${iconsInstalled}/dist/octicon/x-16.js";`,
+    ...forms("src/forms/icons-path", `../${iconsInstalled}/dist/octicon/x-16.js`),
     "src/lit-path.ts": `import "../node_modules/lit/index.js";`,
   }),
   // A value import of a declaration file, in each value form, an inline `type` specifier among
@@ -125,8 +135,9 @@ export const sources = (cases: Record<string, Case>): Record<string, string> =>
   Object.fromEntries(Object.entries(cases).map(([path, { source }]) => [path, source]));
 
 // Every import the layer may make, in each form, with names that hold dots, which a rule must tell
-// from . and .. segments: its own files, lit, and the foundation by its package name, its modules,
-// its declarations as types, and its sheets as CSS module scripts.
+// from . and .. segments: its own files, lit, the foundation by its package name, its modules,
+// its declarations as types, and its sheets as CSS module scripts, and the icons by their package
+// name, each icon's module.
 export const allowed: Record<string, string> = {
   "src/badge.ts": `export { x } from "./events.ts";`,
   "src/nested/own.ts": `import type { X } from "../badge.ts";\nawait import("../badge.ts");`,
@@ -150,6 +161,11 @@ export const allowed: Record<string, string> = {
     `export * from "${foundation}/dom.js";`,
     `await import("${foundation}/dom.js");`,
     `import type { BytesOptions } from "${foundation}/format.js";`,
+  ].join("\n"),
+  "src/icons.ts": [
+    `import x from "${icons}/octicon/x-16";`,
+    `export { default } from "${icons}/octicon/x-16";`,
+    `await import("${icons}/octicon/x-16");`,
   ].join("\n"),
   "src/foundation-sheets.ts": [
     `import reset from "${foundation}/baseline/reset.css" with { type: "css" };`,
@@ -213,7 +229,15 @@ const foundationFiles = {
   "dist/baseline/elements.css": ".elements {}",
 };
 
-/** Writes `files` under `dir` with the manifest, the targets, the externals, the foundation, and a
+/** The icons as installed: their manifest as the install holds it, and a stub of the module the
+ * cases reach through its exports, with its types. */
+const iconsFiles = {
+  "package.json": iconsManifest,
+  "dist/octicon/x-16.js": `export default "<svg></svg>";`,
+  "dist/octicon/x-16.d.ts": "declare const svg: string;\nexport default svg;",
+};
+
+/** Writes `files` under `dir` with the manifest, the targets, the externals, the peers, and a
  * link to the package itself, as an install of its own name lays it out, so every import resolves
  * and the lint judges it. Returns the code files written under src/. */
 export function writeTree(dir: string, files: Record<string, string>): string[] {
@@ -229,6 +253,9 @@ export function writeTree(dir: string, files: Record<string, string>): string[] 
   }
   for (const [path, source] of Object.entries(foundationFiles)) {
     written[join("node_modules", foundation, path)] = source;
+  }
+  for (const [path, source] of Object.entries(iconsFiles)) {
+    written[join("node_modules", icons, path)] = source;
   }
   for (const [path, source] of Object.entries(written)) {
     mkdirSync(dirname(join(dir, path)), { recursive: true });

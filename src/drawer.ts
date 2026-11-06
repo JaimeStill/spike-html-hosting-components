@@ -4,13 +4,16 @@
 // over a body holding the slot. The mode is the viewport's, by a media query on `dock`; a switch
 // swaps only the shadow root's wrapper and its slot, so the slotted content, the host's own
 // children, is never moved, disconnected, or re-created.
-// From spike-html-apps-components (51d2b92): src/drawer.ts.
+// Adapted from spike-html-apps-components (51d2b92): src/drawer.ts, its Close button showing the
+// icons layer's x-16 glyph alone, its text visually hidden.
 
 import { html, LitElement, type PropertyDeclarations, type PropertyValues } from "lit";
+import { unsafeHTML } from "lit/directives/unsafe-html.js";
 
 import elements from "@jaimestill/spike-html-apps-foundation/baseline/elements.css" with { type: "css" };
 import reset from "@jaimestill/spike-html-apps-foundation/baseline/reset.css" with { type: "css" };
 import { define, emit } from "@jaimestill/spike-html-apps-foundation/dom.js";
+import x from "@jaimestill/spike-html-hosting-icons/octicon/x-16";
 import styles from "./drawer.css" with { type: "css" };
 
 /** The tag the element defines. */
@@ -36,13 +39,13 @@ export type CloseDetail = Record<string, never>;
  * native dialog shown by `showModal()`: it covers the viewport edge to edge, sliding in from the
  * inline-start edge, the right in a right-to-left context, the page behind it inert, and focus
  * moves inside it. Its header holds `label` as a visible `h2` that names the dialog, and a Close
- * button whose accessible name adds the label, "Close Documents"; the button's visible text is
- * the `close` slot's, "Close" by default, for a translation. The header stays in view while the
- * children scroll below it. The Close button, Escape, `close()`, `toggle()`, or `open` set false
- * closes it, and the dialog returns focus to the element that held it when it opened. Under
- * reduced motion it opens and closes at once. `open` in the markup, or set before the element is
- * connected, opens the drawer as the page loads below `dock`, sending `open`, and is undone
- * while docked, sending nothing.
+ * button that shows Octicons' x-16, from the icons layer, alone: its name is the `close` slot's
+ * text, "Close" by default, for a translation, then the label, "Close Documents", both visually
+ * hidden. The header stays in view while the children scroll below it. The Close button,
+ * Escape, `close()`, `toggle()`, or `open` set false closes it, and the dialog returns focus to the
+ * element that held it when it opened. Under reduced motion it opens and closes at once. `open` in
+ * the markup, or set before the element is connected, opens the drawer as the page loads below
+ * `dock`, sending `open`, and is undone while docked, sending nothing.
  *
  * `open` and `close` go out each time the modal drawer opens or closes, however it was asked,
  * never on a switch between the modes. A switch, as the viewport crosses `dock`, closes an open
@@ -205,13 +208,15 @@ export class Drawer extends LitElement {
         <div class="body"><slot></slot></div>
       </aside>`;
     }
-    // The label is in the Close button's name, visually hidden, so a translated text in the close
-    // slot still names what the button closes.
+    // The Close button shows its glyph alone, hidden from the accessibility tree; its name is the
+    // close slot's text and the label, both visually hidden, so a translated text in the slot
+    // still names what the button closes. The glyph is the icons layer's svg string, a constant,
+    // which unsafeHTML parses once into the button.
     return html`<dialog aria-labelledby="title" @close=${this.#closed}>
       <header>
         <h2 id="title">${this.label}</h2>
         <button type="button" @click=${this.close}>
-          <slot name="close">Close</slot><span class="hidden"> ${this.label}</span>
+          ${unsafeHTML(x)}<span class="hidden"><slot name="close">Close</slot> ${this.label}</span>
         </button>
       </header>
       <div class="body"><slot></slot></div>

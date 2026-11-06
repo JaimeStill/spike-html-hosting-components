@@ -15,7 +15,7 @@
 // one, and a response for an older src dropped;
 // every component renders in every profile the foundation's full entry registers, light and dark,
 // at 1280 and 390 px, with no sideways scroll and its focus drawn, and at 390 px the drawer open
-// as a modal dialog the same; and the theme saved through the
+// as a modal dialog the same, its Close button's x-16 glyph drawn; and the theme saved through the
 // menu on one site applies before first paint on the other, a palette the other doesn't register
 // falling back to its default and staying stored.
 
@@ -27,6 +27,9 @@ import type { Browser, Page } from "@jaimestill/spike-html-apps-tooling/browser.
 import { serve } from "@jaimestill/spike-html-apps-tooling/server.js";
 import type { Server } from "@jaimestill/spike-html-apps-tooling/server.js";
 
+import x from "@jaimestill/spike-html-hosting-icons/octicon/x-16";
+
+import { assertGlyph, glyph } from "./support/glyphs.ts";
 import { registry as read, resize, runs, type Registry } from "./support/profiles.ts";
 import { FOURTH, hold, requested, served } from "./support/served.ts";
 
@@ -752,7 +755,7 @@ describe("the site components", { timeout: 180_000 }, () => {
       }
     });
 
-    test("narrow, the drawer opens modally, with no sideways scroll and its focus drawn, light and dark", async () => {
+    test("narrow, the drawer opens modally, with no sideways scroll, its Close glyph drawn, and its focus drawn, light and dark", async () => {
       for (const run of runs(registry).filter(({ width }) => width < DOCK)) {
         const name = JSON.stringify(run);
         const { width, ...profile } = run;
@@ -806,6 +809,8 @@ describe("the site components", { timeout: 180_000 }, () => {
         }
         const { name: what, inside, visible, outline } = shown.focused;
         assert.ok(inside, `${name}: Tab keeps focus in the drawer, on ${what}`);
+        const close = `${shadow("sl-drawer")}.querySelector("header button")`;
+        assertGlyph(await glyph(page, close, x), `${name}: Close`);
         assert.ok(visible, `${name}: ${what} matches :focus-visible`);
         assert.match(outline, /^solid [1-9]/, `${name}: ${what}'s outline is drawn`);
       }
