@@ -82,7 +82,9 @@ export function hold(path: string): () => void {
  * whose path's first segment names a fixture site, answering with the site's .html or .json file
  * at the rest of the path, a directory's index.html for a path ending in "/", or a 404. A .json
  * request is recorded in requested, waits while its path is held, and with a status query, as
- * ?status=500, is answered with that status, the file still its body. Passes on every other
+ * ?status=500, is answered with that status, the file still its body; with a fail query, as
+ * ?fail, its connection is closed with no response, so the browser's fetch() rejects as it does
+ * when the network fails. Passes on every other
  * request. A site's pages load their modules and sheets from /deps/ and /dist/, which the server's
  * own routes answer.
  */
@@ -110,6 +112,11 @@ export const handler: Handler = async (request, response) => {
   const type = types[extname(file)];
   const list = extname(file) === ".json";
   if (list) await held.get(path);
+  if (list && url.searchParams.has("fail")) {
+    // A list's fail query closes the connection unanswered: a failure at the network level.
+    request.socket.destroy();
+    return true;
+  }
   const body = type === undefined ? undefined : await readFile(file).catch(() => undefined);
   if (body === undefined) response.writeHead(404).end();
   else {

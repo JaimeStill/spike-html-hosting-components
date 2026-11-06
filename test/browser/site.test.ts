@@ -10,8 +10,9 @@
 // the nav lists the components' sites and marks the current one by the path's first segment;
 // with one site deployed ahead, on a release that lists a fourth site, the ahead site's nav lists
 // four and the one behind three, neither requesting a list, until each nav's src names the org's
-// list and both list its four: the built list painted first, the fetched one replacing it, a
-// failed or malformed list leaving the built one, and a response for an older src dropped;
+// list and both list its four: the built list painted first, the fetched one replacing it, an
+// error status, a malformed list, or a fetch that fails at the network level leaving the built
+// one, and a response for an older src dropped;
 // every component renders in every profile the foundation's full entry registers, light and dark,
 // at 1280 and 390 px, with no sideways scroll and its focus drawn, and at 390 px the drawer open
 // as a modal dialog the same; and the theme saved through the
@@ -378,10 +379,23 @@ describe("the site components", { timeout: 180_000 }, () => {
 
     /** The URL of every response the page has had headers for since its last visit(). */
     const responded = new Set<string>();
+    /** The URL of every request whose loading has failed since the last visit(). */
+    const failed = new Set<string>();
+    /** The URL of every request the page has sent, by its id, to name a failed one's URL. */
+    const sent = new Map<string, string>();
     before(async () => {
       page.on("Network.responseReceived", ({ response }: { response: { url: string } }) =>
         responded.add(response.url),
       );
+      page.on(
+        "Network.requestWillBeSent",
+        ({ requestId, request }: { requestId: string; request: { url: string } }) =>
+          sent.set(requestId, request.url),
+      );
+      page.on("Network.loadingFailed", ({ requestId }: { requestId: string }) => {
+        const url = sent.get(requestId);
+        if (url !== undefined) failed.add(url);
+      });
       await page.cdp("Network.enable");
     });
     after(() => page.cdp("Network.disable"));
@@ -402,6 +416,7 @@ describe("the site components", { timeout: 180_000 }, () => {
     async function visit(path: string): Promise<void> {
       await resize(page, 1280);
       responded.clear();
+      failed.clear();
       await page.goto(`${server.origin}${path}`);
       await page.evaluate(`window.ready.then(() => ${SETTLED})`);
     }
@@ -413,6 +428,18 @@ describe("the site components", { timeout: 180_000 }, () => {
     async function answered(list: string): Promise<void> {
       const url = `${server.origin}${list}`;
       await whilst(() => responded.has(url), `a response for ${list}`);
+      await page.evaluate(`new Promise((resolve) => setTimeout(resolve))
+        .then(() => document.querySelector("sl-site-nav").updateComplete)
+        .then(() => ${SETTLED})`);
+    }
+
+    /**
+     * Resolves once the page's request for the list has failed, which the nav's fetch() rejects
+     * on, and the nav has had a task and two frames since to render what it made of it.
+     */
+    async function refused(list: string): Promise<void> {
+      const url = `${server.origin}${list}`;
+      await whilst(() => failed.has(url), `a failed request for ${list}`);
       await page.evaluate(`new Promise((resolve) => setTimeout(resolve))
         .then(() => document.querySelector("sl-site-nav").updateComplete)
         .then(() => ${SETTLED})`);
@@ -475,6 +502,18 @@ describe("the site components", { timeout: 180_000 }, () => {
         await answered(list);
         assert.deepEqual(await listed(), { links: FOUR, current: [FOURTH.label] }, list);
       }
+      assert.deepEqual(await page.evaluate("window.errors"), []);
+    });
+
+    test("a fetch that fails at the network level, its connection closed unanswered, leaves the built list", async () => {
+      const list = `${LISTS.org}?fail`;
+      await visit(`${SQLATE}${src(list)}`);
+      await refused(list);
+      assert.deepEqual(await listed(), { links: SITES, current: ["sqlate"] }, "the site behind");
+      assert.deepEqual(await page.evaluate("window.errors"), []);
+      await visit(`${AHEAD}${src(list)}`);
+      await refused(list);
+      assert.deepEqual(await listed(), { links: FOUR, current: [FOURTH.label] }, "the site ahead");
       assert.deepEqual(await page.evaluate("window.errors"), []);
     });
 
