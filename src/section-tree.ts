@@ -258,8 +258,7 @@ export class SectionTree extends LitElement {
   }
 
   render() {
-    const hint = (key: string) =>
-      html`<span class="hint" aria-hidden="true"><kbd>${key}</kbd></span>`;
+    const hint = (key: string) => html`<span aria-hidden="true"><kbd>${key}</kbd></span>`;
     // aria-keyshortcuts declares a key only while the reader's setting has it fire.
     const shortcut = (keys: string) => (this._keys ? keys : nothing);
     return html`
