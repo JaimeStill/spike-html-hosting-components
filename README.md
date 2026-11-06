@@ -18,7 +18,7 @@ foundation's sheets by package name reaches the components' shadow roots too. A 
 their tags:
 
 ```
-pnpm add github:JaimeStill/spike-html-hosting-components#v0.2.0 github:JaimeStill/spike-html-apps-foundation#v0.3.0
+pnpm add github:JaimeStill/spike-html-hosting-components#v0.2.2 github:JaimeStill/spike-html-apps-foundation#v0.3.0
 ```
 
 ## Use
@@ -245,11 +245,14 @@ defined, which calls the drawer's `show()` and says through `aria-expanded` whet
     aria-controls="pages"
     aria-haspopup="dialog"
     aria-expanded="false"
+    aria-label="Pages"
     data-keys="p"
   >
     Pages <span aria-hidden="true"><kbd>P</kbd></span>
   </button>
-  <button type="button" commandfor="theme" command="--open" data-keys="t">Theme</button>
+  <button type="button" commandfor="theme" command="--open" aria-label="Theme" data-keys="t">
+    Theme <span aria-hidden="true"><kbd>T</kbd></span>
+  </button>
 </header>
 <sl-drawer label="Pages" id="pages">
   <sl-site-index label="Site">
@@ -306,8 +309,9 @@ mise run screenshots --keep           # keep the terminal output's captures
 mise run currency                     # report every tool, package, and action pin, the foundation's and the tooling's tags, and the foundation's peer range, behind its latest
 ```
 
-`test/fixtures/section-tree.html` is the section tree's fixture page, `test/fixtures/drawer.html`
-the drawer cases' page, and `test/fixtures/sites/` holds two fixture sites served at their project
+`test/fixtures/section-tree.html` is the section tree's fixture page,
+`test/fixtures/section-tree-short.html` its page of sections shorter than a screen,
+`test/fixtures/drawer.html` the drawer cases' page, and `test/fixtures/sites/` holds two fixture sites served at their project
 sites' paths: the architecture stand-in's, with the site nav, the site index in its Pages drawer
 and opener, and the page header, and sqlate's, with the site nav. The browser tier runs on them
 in the pinned chrome-headless-shell, and `mise run screenshots` captures them through the
