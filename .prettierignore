@@ -12,3 +12,5 @@
 .claude/plans/
 .claude/briefs/
 node_modules
+# The org fixture site's list that isn't JSON, which the site nav must leave unlisted.
+test/fixtures/sites/spike-html-hosting/malformed.json

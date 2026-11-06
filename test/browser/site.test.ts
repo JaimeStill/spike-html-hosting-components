@@ -8,6 +8,10 @@
 // of terms beside their values, in source order and as text, and an empty or absent dl renders
 // nothing; the index marks the page on screen, a directory labeled by its index page or its name;
 // the nav lists the components' sites and marks the current one by the path's first segment;
+// with one site deployed ahead, on a release that lists a fourth site, the ahead site's nav lists
+// four and the one behind three, neither requesting a list, until each nav's src names the org's
+// list and both list its four: the built list painted first, the fetched one replacing it, a
+// failed or malformed list leaving the built one, and a response for an older src dropped;
 // every component renders in every profile the foundation's full entry registers, light and dark,
 // at 1280 and 390 px, with no sideways scroll and its focus drawn, and at 390 px the drawer open
 // as a modal dialog the same; and the theme saved through the
@@ -23,11 +27,12 @@ import { serve } from "@jaimestill/spike-html-apps-tooling/server.js";
 import type { Server } from "@jaimestill/spike-html-apps-tooling/server.js";
 
 import { registry as read, resize, runs, type Registry } from "./support/profiles.ts";
-import { served } from "./support/served.ts";
+import { FOURTH, hold, requested, served } from "./support/served.ts";
 
 /** The fixture sites' bases, as GitHub Pages serves each project site. */
 const ARCHITECTURE = "/spike-html-hosting-architecture/";
 const SQLATE = "/spike-html-hosting-sqlate/";
+const AHEAD = `/${FOURTH.repository}/`;
 
 /** The architecture site's pages the cases load. */
 const PAGES = {
@@ -54,6 +59,20 @@ const SITES = [
   ["Architecture", "/spike-html-hosting-architecture/"],
   ["sqlate", "/spike-html-hosting-sqlate/"],
 ];
+
+/** The sites the org's list names, the release ahead's too: the built sites and the fourth. */
+const FOUR = [...SITES, [FOURTH.label, AHEAD]];
+
+/** The org fixture site's lists of sites. */
+const LISTS = {
+  org: "/spike-html-hosting/sites.json",
+  older: "/spike-html-hosting/older.json",
+  malformed: "/spike-html-hosting/malformed.json",
+  invalid: "/spike-html-hosting/invalid.json",
+};
+
+/** A fixture site page's query that sets its site nav's src. */
+const src = (list: string) => `?src=${encodeURIComponent(list)}`;
 
 /** The drawer's default dock, 48rem, at the initial font size, in px: the fixture sites' too. */
 const DOCK = 768;
@@ -345,6 +364,148 @@ describe("the site components", { timeout: 180_000 }, () => {
       })()`);
       const { links, current } = await listed();
       assert.deepEqual({ links, current }, { links: SITES, current: [] });
+    });
+  });
+
+  describe("sl-site-nav, one site deployed ahead", () => {
+    /** The nav's links as text and href, and the current one's text. */
+    const listed = (): Promise<{ links: string[][]; current: string[] }> =>
+      page.evaluate(`({
+        links: ${NAV_LINKS}.map((a) => [a.textContent, a.getAttribute("href")]),
+        current: ${NAV_LINKS}.filter((a) => a.getAttribute("aria-current") === "page").map((a) => a.textContent),
+      })`);
+
+    /** The URL of every response the page has had headers for since its last visit(). */
+    const responded = new Set<string>();
+    before(async () => {
+      page.on("Network.responseReceived", ({ response }: { response: { url: string } }) =>
+        responded.add(response.url),
+      );
+      await page.cdp("Network.enable");
+    });
+    after(() => page.cdp("Network.disable"));
+
+    /** Resolves once the condition holds, polled from the test every 10 ms, for at most 5 s. */
+    async function whilst(condition: () => boolean, what: string): Promise<void> {
+      for (const started = Date.now(); !condition();) {
+        if (Date.now() - started > 5000) throw new Error(`not within 5000 ms: ${what}`);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    }
+
+    /** Resolves once the server has had a request for the list. */
+    const received = (list: string) =>
+      whilst(() => requested.includes(list), `a request for ${list}`);
+
+    /** Loads the page once, its storage as it is, and resolves once it has rendered. */
+    async function visit(path: string): Promise<void> {
+      await resize(page, 1280);
+      responded.clear();
+      await page.goto(`${server.origin}${path}`);
+      await page.evaluate(`window.ready.then(() => ${SETTLED})`);
+    }
+
+    /**
+     * Resolves once the page has had the response for the list, which the nav's fetch() resolves
+     * to, and the nav has had a task and two frames since to render what it made of it.
+     */
+    async function answered(list: string): Promise<void> {
+      const url = `${server.origin}${list}`;
+      await whilst(() => responded.has(url), `a response for ${list}`);
+      await page.evaluate(`new Promise((resolve) => setTimeout(resolve))
+        .then(() => document.querySelector("sl-site-nav").updateComplete)
+        .then(() => ${SETTLED})`);
+    }
+
+    /** Resolves once the nav lists the number of sites. */
+    const lists = (count: number) => until(page, `${NAV_LINKS}.length === ${count}`);
+
+    test("with no src, the site ahead lists four sites and the sites behind three, and no list is requested", async () => {
+      requested.length = 0;
+      await load(AHEAD);
+      assert.deepEqual(await listed(), { links: FOUR, current: [FOURTH.label] });
+      await load(SQLATE);
+      assert.deepEqual(await listed(), { links: SITES, current: ["sqlate"] });
+      await load(ARCHITECTURE);
+      assert.deepEqual(await listed(), { links: SITES, current: ["Architecture"] });
+      assert.deepEqual(requested, [], "no request for any list");
+      assert.deepEqual(await page.evaluate("window.errors"), []);
+    });
+
+    test("with src naming the org's list, the site ahead and the site behind both list its four", async () => {
+      requested.length = 0;
+      await visit(`${AHEAD}${src(LISTS.org)}`);
+      await answered(LISTS.org);
+      assert.deepEqual(await listed(), { links: FOUR, current: [FOURTH.label] });
+      await load(SQLATE, {}, src(LISTS.org));
+      await lists(FOUR.length);
+      assert.deepEqual(await listed(), { links: FOUR, current: ["sqlate"] });
+      assert.ok(requested.length > 0, "the lists were requested");
+      assert.ok(
+        requested.every((path) => path === LISTS.org),
+        `only the org's list: ${requested}`,
+      );
+      assert.deepEqual(await page.evaluate("window.errors"), []);
+    });
+
+    test("the built list is painted while the list is held, and the list replaces it once it comes", async () => {
+      requested.length = 0;
+      const release = hold(LISTS.org);
+      try {
+        await load(SQLATE, {}, src(LISTS.org));
+        await received(LISTS.org);
+        assert.ok(await page.evaluate(`performance.getEntriesByType("paint").length > 0`));
+        assert.deepEqual(await listed(), { links: SITES, current: ["sqlate"] }, "the built list");
+        release();
+        await lists(FOUR.length);
+        assert.deepEqual(await listed(), { links: FOUR, current: ["sqlate"] }, "the org's list");
+      } finally {
+        release();
+      }
+      assert.deepEqual(await page.evaluate("window.errors"), []);
+    });
+
+    test("an error status, even with a list, a body that isn't JSON, or a list with an empty label leaves the built list", async () => {
+      for (const list of [`${LISTS.org}?status=500`, LISTS.malformed, LISTS.invalid]) {
+        await visit(`${SQLATE}${src(list)}`);
+        await answered(list);
+        assert.deepEqual(await listed(), { links: SITES, current: ["sqlate"] }, list);
+        await visit(`${AHEAD}${src(list)}`);
+        await answered(list);
+        assert.deepEqual(await listed(), { links: FOUR, current: [FOURTH.label] }, list);
+      }
+      assert.deepEqual(await page.evaluate("window.errors"), []);
+    });
+
+    test("a changed src fetches its list, the older src's response dropped, and a removed src lists the built sites", async () => {
+      await load(SQLATE);
+      const nav = `document.querySelector("sl-site-nav")`;
+      requested.length = 0;
+      const release = hold(LISTS.older);
+      try {
+        await page.evaluate(`${nav}.setAttribute("src", ${JSON.stringify(LISTS.older)})`);
+        await received(LISTS.older);
+        await page.evaluate(`${nav}.setAttribute("src", ${JSON.stringify(LISTS.org)})`);
+        await lists(FOUR.length);
+      } finally {
+        release();
+      }
+      await page.evaluate(
+        `new Promise((resolve) => setTimeout(resolve, 100)).then(() => ${SETTLED})`,
+      );
+      assert.deepEqual(
+        await listed(),
+        { links: FOUR, current: ["sqlate"] },
+        "the older list dropped",
+      );
+      const fetches = `performance.getEntriesByType("resource").filter((e) => e.initiatorType === "fetch").length`;
+      const before = await page.evaluate(fetches);
+      await page.evaluate(
+        `${nav}.removeAttribute("src"); ${nav}.updateComplete.then(() => ${SETTLED})`,
+      );
+      assert.deepEqual(await listed(), { links: SITES, current: ["sqlate"] });
+      assert.equal(await page.evaluate(fetches), before, "a removed src fetches nothing");
+      assert.deepEqual(await page.evaluate("window.errors"), []);
     });
   });
 

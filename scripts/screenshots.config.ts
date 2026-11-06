@@ -3,7 +3,9 @@
 // a later section, which the tree marks and the progress bar reaches, narrow in its sticky bar,
 // and with the keys help dialog open; the architecture fixture site's index page, at its base,
 // with the site nav, the site index in its Pages drawer, and the page header, wide with the drawer
-// docked, narrow with it closed and open by P, and with its theme menu open; the profile's
+// docked, narrow with it closed and open by P, and with its theme menu open; one site deployed
+// ahead of another, the fourth fixture site's index page and the sqlate one's, each with its
+// built site nav and with its src naming the org fixture site's list, wide; the profile's
 // facets, palette, space, and type, at flexoki, regular, and mono; --all's profiles, every palette
 // at the defaults, then compact and sans at flexoki; the profiles each page registers, from the
 // foundation's registry; and the repository served as the browser tier serves it. The files go
@@ -19,7 +21,7 @@ import type {
   Step,
 } from "@jaimestill/spike-html-apps-tooling/screenshots.js";
 
-import { served } from "../test/browser/support/served.ts";
+import { FOURTH, served } from "../test/browser/support/served.ts";
 
 const wide = { width: 1280, height: 800 };
 const narrow = { width: 390, height: 844 };
@@ -143,6 +145,28 @@ const site: DescribedState[] = [
   },
 ];
 
+/** Resolves once the site nav lists the fourth site, its src's list fetched. */
+const fetched: Step = async (page) => {
+  await page.evaluate(`(async () => {
+    await window.ready;
+    const nav = document.querySelector("sl-site-nav").shadowRoot;
+    while (!nav.querySelector('a[href="/${FOURTH.repository}/"]')) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+  })()`);
+};
+
+/** A site's page with its built site nav, and with its src the org's list, each wide. */
+const skewed = (name: string, caption: string, site: string): DescribedPage[] => [
+  { name, caption: `${caption}, its built site nav`, path: `${site}/`, states: [{ full: false }] },
+  {
+    name: `${name}-fetched`,
+    caption: `${caption}, its site nav's src the org's list`,
+    path: `${site}/?src=${encodeURIComponent("/spike-html-hosting/sites.json")}`,
+    states: [{ full: false, open: fetched }],
+  },
+];
+
 const described: DescribedPage[] = [
   {
     name: "section-tree",
@@ -158,6 +182,8 @@ const described: DescribedPage[] = [
     path: "spike-html-hosting-architecture/",
     states: site,
   },
+  ...skewed("ahead", "the site deployed ahead", FOURTH.repository),
+  ...skewed("behind", "the site deployed behind", "spike-html-hosting-sqlate"),
 ];
 
 /** The page's registered names, by flag, read from the foundation's store at its well-known
