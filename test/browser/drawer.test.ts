@@ -11,7 +11,8 @@
 // behind inert and focus inside, closed by its Close button, Escape, close(), toggle(), or open,
 // focus returned to the opener; the Close button showing the x-16 glyph alone, named Close and the
 // label by its visually hidden text, which its slot replaces; open and close sent once each,
-// bubbling and composed, never on a mode switch or on removal, which closes it, a drawer put back closed and opening modally again; a switch in either
+// bubbling and composed, never on a mode switch or on removal, which closes it, a drawer put back
+// closed and opening modally again; a switch in either
 // direction, by the viewport or by dock, keeping the very same slotted elements, never
 // disconnected, and what was typed and counted in them; the slide's transition, absent under
 // reduced motion and on a switch; and the slide from the inline-start edge, the left, or the right
