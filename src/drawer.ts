@@ -4,7 +4,8 @@
 // over a body holding the slot. The mode is the viewport's, by a media query on `dock`; a switch
 // swaps only the shadow root's wrapper and its slot, so the slotted content, the host's own
 // children, is never moved, disconnected, or re-created.
-// From spike-html-apps-components (51d2b92): src/drawer.ts.
+// Adapted from spike-html-apps-components (51d2b92): src/drawer.ts, its Close button showing the
+// icons layer's x-16 glyph alone, its text visually hidden.
 
 import { html, LitElement, type PropertyDeclarations, type PropertyValues } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";

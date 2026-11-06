@@ -4,24 +4,23 @@
 // no link is marked at the page's top, and aria-current follows the scroll; L and H cycle through
 // the top and the sections, wrapping either way, which the keys help dialog lists, and do nothing
 // with the keys turned off; the Previous and Next buttons, so named, show the arrow-up-16 and
-// arrow-down-16 glyphs and their key hints alone, and move the same way; every arrow stays the browser's scrolling, in the page and in a
-// region that scrolls sideways; a move is smooth unless the reader asks for reduced motion; below
-// dock, exactly, for the default and a px dock, and never for a length the query can't read, the
-// tree is a bar stuck to the viewport's top, its links hidden, the root's scroll padding keeping
-// a heading a move or a link scrolls to below it and put back as it leaves; no link text breaks
-// inside a word, whatever the page inherits; the progress bar runs on the root's scroll timeline,
-// guarded by @supports; and the tree renders in every profile the foundation's full entry
-// registers, light and dark, at 1280 and 390 px, with no sideways scroll, its glyphs drawn, and
-// its focus drawn. On
-// test/fixtures/section-tree-short.html, whose sections are shorter than the reading line's
-// distance from the top, L and H visit every stop in order, each move counting from the stop the
-// last one reached, at 1280 and 390 px, instant and smooth, and with a smooth move's scroll cut
-// short by the next, and with no scrollend, as an engine may fire none, the moves still cycle and
-// a reader's scroll still takes the mark; the mark follows a reader's scroll as it happens, and
-// after it the next move counts from the section in view; and a link followed to a listed section
-// holds it as a move would, a tree link clicked or entered at 1280 px, the fragment already in the
-// URL included, and a fragment changed by a script or a link elsewhere on the page at 1280 and
-// 390 px, where the tree's links are hidden in the bar.
+// arrow-down-16 glyphs and their key hints alone, and move the same way; every arrow stays the
+// browser's scrolling, in the page and in a region that scrolls sideways; a move is smooth unless
+// the reader asks for reduced motion; below dock, exactly, for the default and a px dock, and
+// never for a length the query can't read, the tree is a bar stuck to the viewport's top, its
+// links hidden, the root's scroll padding keeping a heading a move or a link scrolls to below it
+// and put back as it leaves; no link text breaks inside a word, whatever the page inherits; the
+// progress bar runs on the root's scroll timeline, guarded by @supports; and the tree renders in
+// every profile the foundation's full entry registers, light and dark, at 1280 and 390 px, with no
+// sideways scroll, its glyphs drawn, and its focus drawn. On test/fixtures/section-tree-short.html,
+// whose sections are shorter than the reading line's distance from the top, L and H visit every
+// stop in order, each move counting from the stop the last one reached, at 1280 and 390 px, instant
+// and smooth, and with a smooth move's scroll cut short by the next, and with no scrollend, as an
+// engine may fire none, the moves still cycle and a reader's scroll still takes the mark; the mark
+// follows a reader's scroll as it happens, and after it the next move counts from the section in
+// view; and a link followed to a listed section holds it as a move would, a tree link clicked or
+// entered at 1280 px, the fragment already in the URL included, and a fragment changed by a script
+// or a link elsewhere on the page at 1280 and 390 px, where the tree's links are hidden in the bar.
 
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";

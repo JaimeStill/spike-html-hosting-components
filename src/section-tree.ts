@@ -140,8 +140,9 @@ const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
  * each in a kbd, and are named "Previous" and "Next" by their aria-label, while the help dialog
  * lists the bindings as "Previous section" and "Next section". They move the same way whatever
  * the setting, are disabled only when the tree names no section, and carry aria-keyshortcuts while
- * the setting has the keys fire. A move scrolls smoothly unless the reader asks for reduced motion; its scroll ends at its
- * scrollend or, in an engine that fires none, once the page has stood still for a few frames.
+ * the setting has the keys fire. A move scrolls smoothly unless the reader asks for reduced
+ * motion; its scroll ends at its scrollend or, in an engine that fires none, once the page has
+ * stood still for a few frames.
  *
  * At `dock`, a CSS length (DOCK, 70rem, by default), and wider, the tree is a column: the
  * progress, the links, and the buttons. Below it the tree is a bar stuck to the top of the

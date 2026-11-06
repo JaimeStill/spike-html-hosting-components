@@ -1,7 +1,7 @@
 // A release's shape: a pack of the build checked against the sources, package.json's files and
 // exports, which Node itself resolves, the Apache 2.0 LICENSE its manifest declares, and its
-// dependencies, lit pinned exactly and the foundation and the icons peers. test/unit/release.test.ts runs it on
-// a pnpm pack.
+// dependencies, lit pinned exactly and the foundation and the icons peers.
+// test/unit/release.test.ts runs it on a pnpm pack.
 // Adapted from spike-html-apps-components (51d2b92): test/unit/release.ts, without marked.
 
 import { execFileSync } from "node:child_process";
