@@ -7,9 +7,10 @@
 // scrolling body, docked or not, its whole focus outline drawn at either edge; below it, closed by
 // default, and opened modally by show(), toggle(), or open, open in its markup or set before it is
 // connected included, which is undone while docked, a dialog named by its visible heading and
-// covering the viewport edge to edge, its header in view while its content scrolls, the page behind inert and focus inside, closed by its Close button, Escape, close(),
-// toggle(), or open, focus returned to the opener; the Close button's text replaced through its
-// slot; open and close sent once each, bubbling and composed, never on a mode switch or on removal,
+// covering the viewport edge to edge, its header in view while its content scrolls, the page
+// behind inert and focus inside, closed by its Close button, Escape, close(), toggle(), or open,
+// focus returned to the opener; the Close button showing the x-16 glyph alone, named Close and the
+// label by its visually hidden text, which its slot replaces; open and close sent once each, bubbling and composed, never on a mode switch or on removal,
 // which closes it, a drawer put back closed and opening modally again; a switch in either
 // direction, by the viewport or by dock, keeping the very same slotted elements, never
 // disconnected, and what was typed and counted in them; the slide's transition, absent under
@@ -27,6 +28,9 @@ import type { Browser, Page } from "@jaimestill/spike-html-apps-tooling/browser.
 import { serve } from "@jaimestill/spike-html-apps-tooling/server.js";
 import type { Server } from "@jaimestill/spike-html-apps-tooling/server.js";
 
+import x from "@jaimestill/spike-html-hosting-icons/octicon/x-16";
+
+import { assertGlyph, glyph } from "./support/glyphs.ts";
 import { served } from "./support/served.ts";
 
 /** An event the document heard from the drawer. */
@@ -68,6 +72,9 @@ interface AXNode {
   role?: { value: string };
   name?: { value: string };
 }
+
+/** The drawer's Close button, in a page expression. */
+const CLOSE = `document.querySelector("sl-drawer").shadowRoot.querySelector("header button")`;
 
 // The dock width, 48rem at the initial font size, at which the drawer docks, and a viewport either
 // side of it.
@@ -254,6 +261,18 @@ describe("drawer", { timeout: 60_000 }, () => {
       .filter((node) => !node.ignored && node.role?.value === role)
       .map((node) => node.name?.value ?? "");
   };
+  // The Close button's visually hidden text, its name's: its box, its clip, and its text in the
+  // shadow tree, the close slot's fallback and the label.
+  const closeText = (): Promise<{ box: number[]; clip: string; text: string }> =>
+    page.evaluate(`(() => {
+      const hidden = ${CLOSE}.querySelector("slot[name=close]").closest("span");
+      const box = hidden.getBoundingClientRect();
+      return {
+        box: [box.width, box.height],
+        clip: getComputedStyle(hidden).clipPath,
+        text: hidden.textContent.replace(/\\s+/g, " ").trim(),
+      };
+    })()`);
   // The drawer's shadow tree's headings, each with whether it sits in the wrapper rendered and
   // shows, and the wrapper's naming attributes.
   const headings = (): Promise<{
@@ -621,6 +640,14 @@ describe("drawer", { timeout: 60_000 }, () => {
     await mount(NARROW);
     await openByKeyboard();
     assert.ok((await exposed("button")).includes("Close Documents"), "the button's name");
+    // It shows the x-16 glyph alone: its name's text, the close slot's and the label, is visually
+    // hidden, a 1px box clipped away.
+    assertGlyph(await glyph(page, `${CLOSE}`, x), "Close");
+    assert.deepEqual(await closeText(), {
+      box: [1, 1],
+      clip: "inset(50%)",
+      text: "Close Documents",
+    });
     await clickAt(await center("header button", true));
     await closedHeard(1);
     const shown = await read();
@@ -632,20 +659,20 @@ describe("drawer", { timeout: 60_000 }, () => {
     assert.deepEqual(shown.sent, ["open", "close"]);
   });
 
-  test("a replacement for the Close button's text, through its close slot, shows and leads its name", async () => {
+  test("a replacement for the Close button's text, through its close slot, leads its name, visually hidden beside the glyph", async () => {
     await mount(NARROW, {}, '<span slot="close" id="fermer">Fermer</span>');
     await openByKeyboard();
     const names = await exposed("button");
     assert.ok(names.includes("Fermer Documents"), `the button's name: ${names}`);
     assert.ok(!names.some((name) => name.startsWith("Close")), "the default text is replaced");
-    const shown: { visible: boolean; inButton: boolean } = await page.evaluate(`(() => {
-      const fermer = document.querySelector("#fermer");
-      return {
-        visible: fermer.checkVisibility(),
-        inButton: fermer.assignedSlot?.closest("button") != null,
-      };
-    })()`);
-    assert.deepEqual(shown, { visible: true, inButton: true });
+    // Slotted into the Close button's close slot, the replacement is clipped away with the label.
+    const slotted: boolean = await page.evaluate(
+      `document.querySelector("#fermer").assignedSlot === ${CLOSE}.querySelector("slot[name=close]")`,
+    );
+    assert.ok(slotted, "the replacement fills the Close button's close slot");
+    const { box, clip } = await closeText();
+    assert.deepEqual([box, clip], [[1, 1], "inset(50%)"]);
+    assertGlyph(await glyph(page, `${CLOSE}`, x), "Close");
   });
 
   test("Escape closes it, focus returns to the opener, and close goes out once", async () => {

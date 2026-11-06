@@ -22,12 +22,14 @@
     "lit": "3.3.3"
   },
   "peerDependencies": {
-    "@jaimestill/spike-html-apps-foundation": "^0.3.0"
+    "@jaimestill/spike-html-apps-foundation": "^0.3.0",
+    "@jaimestill/spike-html-hosting-icons": "^0.1.0"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@jaimestill/spike-html-apps-foundation": "github:JaimeStill/spike-html-apps-foundation#v0.3.0",
     "@jaimestill/spike-html-apps-tooling": "github:JaimeStill/spike-html-apps-tooling#v0.3.0",
+    "@jaimestill/spike-html-hosting-icons": "github:JaimeStill/spike-html-hosting-icons#v0.1.0",
     "@types/node": "26.6.6",
     "eslint": "10.14.0",
     "eslint-import-resolver-typescript": "4.4.5",

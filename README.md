@@ -5,28 +5,34 @@ and their sheets, that the spike's GitHub Pages sites build their pages from, th
 the page header, the site index, the nav between the sites, and the drawer that holds the site
 index where its column doesn't fit. It is ES modules with their type declarations and
 stylesheets, built on
-[spike-html-apps-foundation](https://github.com/JaimeStill/spike-html-apps-foundation), which it
-takes as a peer, and is released by git tag.
+[spike-html-apps-foundation](https://github.com/JaimeStill/spike-html-apps-foundation) and drawing
+its glyphs from [spike-html-hosting-icons](https://github.com/JaimeStill/spike-html-hosting-icons),
+both of which it takes as peers, and is released by git tag.
 
 ## Install
 
 Each release is a tag, `v<version>`, whose tree is the package as `pnpm pack` builds it:
 `package.json`, this README, the LICENSE, and `dist/`; each GitHub release also carries the
-tarball. It depends on lit 3.3.3, and takes the foundation as a peer at `^0.3.0`: a site declares
-the foundation beside the components, and the one copy serves both, so a restyle of the
-foundation's sheets by package name reaches the components' shadow roots too. A site pins both by
+tarball. It depends on lit 3.3.3, and takes the foundation as a peer at `^0.3.0` and the icons
+at `^0.1.0`: a site declares each beside the components, and the one copy serves both, so a
+restyle of the foundation's sheets by package name reaches the components' shadow roots too, and
+a glyph the site and the components both use is in its bundle once. A site pins all three by
 their tags:
 
 ```
-pnpm add github:JaimeStill/spike-html-hosting-components#v0.3.0 github:JaimeStill/spike-html-apps-foundation#v0.3.0
+pnpm add github:JaimeStill/spike-html-hosting-components#v0.3.0 \
+  github:JaimeStill/spike-html-apps-foundation#v0.3.0 \
+  github:JaimeStill/spike-html-hosting-icons#v0.1.0
 ```
 
 ## Use
 
 The package is `@jaimestill/spike-html-hosting-components`. Each module defines its element when
 it is imported, and the element's shadow root adopts the foundation's reset and elements sheets,
-then its own. The modules import `lit` and the foundation by package name and their sheets as CSS
-module scripts, `with { type: "css" }`. A site built with
+then its own. The modules import `lit`, the foundation, and each glyph they show, one icons module
+apiece, by package name, and their sheets as CSS module scripts, `with { type: "css" }`; tsc
+builds one module per element, so a site's bundle holds only the glyphs of the elements it
+imports. A site built with
 [spike-html-hosting-sdk](https://github.com/JaimeStill/spike-html-hosting-sdk) imports each
 element's module from its entry script, and the SDK's `cssModuleScripts()` Vite plugin, which
 parses every module under `node_modules/@jaimestill/`, rewrites each sheet to a constructed
@@ -91,12 +97,13 @@ GitHub's heading id, with a nested `ul` or `ol` for the `h3`s under it:
   the section in view. H and L are bound by `register()` in the foundation's keys module, so its
   help dialog lists them as "Previous section" and "Next section" and its off switch, which
   covers character keys, turns them off. Every arrow key stays the browser's own scrolling, in the
-  page and in any region that scrolls sideways. The Previous and Next buttons, with the key hints
-  H and L, each in a `<kbd>`, move the same way whatever the setting, are disabled only when the
-  tree names no section, and carry `aria-keyshortcuts` while the keys are on. A move scrolls
-  smoothly unless the reader asks for reduced motion; its scroll ends at its `scrollend`, or, in an
-  engine that fires none, as Safari may, once the page has stood still for five frames, or after
-  three seconds at most, whichever comes first.
+  page and in any region that scrolls sideways. The Previous and Next buttons show Octicons'
+  `arrow-up-16` and `arrow-down-16` with the key hints H and L, each in a `<kbd>`, and are named
+  "Previous" and "Next" by their `aria-label`. They move the same way whatever the setting, are
+  disabled only when the tree names no section, and carry `aria-keyshortcuts` while the keys are
+  on. A move scrolls smoothly unless the reader asks for reduced motion; its scroll ends at its
+  `scrollend`, or, in an engine that fires none, as Safari may, once the page has stood still for
+  five frames, or after three seconds at most, whichever comes first.
 - `dock`, a CSS length, `70rem` by default (exported as `DOCK`), is the width at which the tree is
   a column, and wider: where one 16rem side column fits beside a reading column of 80ch in the
   foundation's default mono type. A site whose layout docks the column elsewhere sets its own,
@@ -250,18 +257,26 @@ a switch between the modes swaps only the shadow root's wrapper around the same 
 - Below `dock` it is closed until `show()`, `toggle()`, or `open` opens it as a native modal
   dialog covering the viewport, sliding in from the inline-start edge unless the reader asks for
   reduced motion, the page behind inert and focus inside. Its header holds `label` as a visible
-  `h2` and a Close button named "Close" and the label; the `close` slot replaces the button's
-  visible text. The Close button, Escape, `close()`, `toggle()`, or `open` set false closes it,
-  and focus returns to the element that held it.
+  `h2` and a Close button that shows Octicons' `x-16` alone, named "Close" and the label by its
+  visually hidden text; the `close` slot replaces "Close" there, for a translation. The Close
+  button, Escape, `close()`, `toggle()`, or `open` set false closes it, and focus returns to the
+  element that held it.
 - `open` and `close` go out, bubbling and composed, each time the modal drawer opens or closes,
   never on a switch between the modes or on removal. The mode is a custom state, `docked` or
   `drawer`.
 
 A site shell holds its site index in a drawer labeled "Pages", and its header holds the opener,
-page markup and the page's script rather than the drawer's: a button labeled "Pages" with the
-key hint P in a `<kbd>`, bound to P by the foundation's keys module through `data-keys="p"`, as
-the Theme button is bound to T, shown only below the drawer's `dock` and only once the drawer is
-defined, which calls the drawer's `show()` and says through `aria-expanded` whether it is open:
+page markup and the page's script rather than the drawer's: a button named "Pages" by its
+`aria-label`, showing its glyph and the key hint P in a `<kbd>`, bound to P by the foundation's
+keys module through `data-keys="p"`, as the Help button is bound to ? and the Theme button to T,
+shown only below the drawer's `dock` and only once the drawer is defined, which calls the drawer's
+`show()` and says through `aria-expanded` whether it is open. Each header button, and the keys
+help dialog's Close, shows a glyph and its key hint, its word no longer shown and its name in its
+`aria-label`. The page's markup names each glyph by a marker, an empty
+`<svg data-icon="<set>/<name>">`, which
+[spike-html-hosting-sdk](https://github.com/JaimeStill/spike-html-hosting-sdk) fills with the
+icons module's `svg` at build: Octicons' `list-unordered-16` for Pages, `question-16` for Help,
+`paintbrush-16` for Theme, and `x-16` for the help dialog's Close:
 
 ```html
 <header>
@@ -275,10 +290,16 @@ defined, which calls the drawer's `show()` and says through `aria-expanded` whet
     aria-label="Pages"
     data-keys="p"
   >
-    Pages <span aria-hidden="true"><kbd>P</kbd></span>
+    <svg data-icon="octicon/list-unordered-16"></svg>
+    <span aria-hidden="true"><kbd>P</kbd></span>
+  </button>
+  <button type="button" commandfor="help" command="show-modal" aria-label="Help" data-keys="?">
+    <svg data-icon="octicon/question-16"></svg>
+    <span aria-hidden="true"><kbd>?</kbd></span>
   </button>
   <button type="button" commandfor="theme" command="--open" aria-label="Theme" data-keys="t">
-    Theme <span aria-hidden="true"><kbd>T</kbd></span>
+    <svg data-icon="octicon/paintbrush-16"></svg>
+    <span aria-hidden="true"><kbd>T</kbd></span>
   </button>
 </header>
 <sl-drawer label="Pages" id="pages">
@@ -288,6 +309,16 @@ defined, which calls the drawer's `show()` and says through `aria-expanded` whet
     </ul>
   </sl-site-index>
 </sl-drawer>
+<dialog id="help" aria-labelledby="help-title">
+  <h2 id="help-title">Keyboard shortcuts</h2>
+  <div data-keys-list></div>
+  <footer>
+    <button type="button" commandfor="help" command="close" aria-label="Close" data-keys="?">
+      <svg data-icon="octicon/x-16"></svg>
+      <span aria-hidden="true"><kbd>?</kbd></span>
+    </button>
+  </footer>
+</dialog>
 ```
 
 ```css
@@ -322,7 +353,7 @@ hidden.
 Tasks run through [mise](https://mise.jdx.dev):
 
 ```
-mise run install                      # the pinned tools, and node_modules with the foundation and the tooling at their tags; reads the network
+mise run install                      # the pinned tools, and node_modules with the foundation, the icons, and the tooling at their tags; reads the network
 mise run check                        # lint, types, build, and the unit and browser tiers; reads no network
 mise run build                        # src/ into dist/
 mise run screenshots                  # capture each fixture page light and dark, wide and narrow, inline in the terminal
@@ -333,7 +364,7 @@ mise run screenshots --scheme dark    # only the scheme named, light or dark
 mise run screenshots --output browser # a gallery of the captures, opened in the browser; directory keeps the files
 mise run screenshots --dir <path>     # write the captures into the directory named
 mise run screenshots --keep           # keep the terminal output's captures
-mise run currency                     # report every tool, package, and action pin, the foundation's and the tooling's tags, and the foundation's peer range, behind its latest
+mise run currency                     # report every tool, package, and action pin, the foundation's, the icons', and the tooling's tags, and the peers' ranges, behind its latest
 ```
 
 `test/fixtures/section-tree.html` is the section tree's fixture page,
@@ -343,8 +374,8 @@ sites served at their project sites' paths: the architecture stand-in's, with th
 site index in its Pages drawer and opener, and the page header; sqlate's, with the site nav as
 built, a site deployed behind; a fourth site's, with a site nav whose `SITES` lists it too, a site
 deployed ahead; and the org's lists for `src`, `sites.json` naming all four. The browser tier
-runs on them in the pinned chrome-headless-shell, and `mise run screenshots` captures them through the
-`spike-html-apps-screenshots` bin of
+runs on them in the pinned chrome-headless-shell, and `mise run screenshots` captures them
+through the `spike-html-apps-screenshots` bin of
 [spike-html-apps-tooling](https://github.com/JaimeStill/spike-html-apps-tooling).
 
 A push to main whose `package.json` version has no tag yet releases it: the check, then the pack

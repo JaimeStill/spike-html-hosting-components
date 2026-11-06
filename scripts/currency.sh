@@ -49,16 +49,16 @@ pins=$(node -p '
 ')
 typescript_eslint=$(node -p 'require("./package.json").devDependencies["typescript-eslint"]')
 while read -r package pin; do
-  # A github: devDependency (the foundation, the tooling) is pinned to its repository's release
-  # tag, which the registry doesn't hold: its tag against that repository's highest tag.
+  # A github: devDependency (the foundation, the icons, the tooling) is pinned to its repository's
+  # release tag, which the registry doesn't hold: its tag against that repository's highest tag.
   if [[ $pin == github:* ]]; then
     spec=${pin#github:}
     latest_tag "${spec%%#*}"
     if [[ -n "$latest" ]] && behind "${spec#*#}" "$latest"; then
       trailing+=$'\n'"package.json: $package ${spec#*#} -> $latest"
     fi
-    # A peer (the foundation) is by a caret range, which must admit that latest release, so a
-    # consumer can declare it beside the components: by the release test's own rule.
+    # A peer (the foundation, the icons) is by a caret range, which must admit that latest release,
+    # so a consumer can declare it beside the components: by the release test's own rule.
     range=$(node -p 'require("./package.json").peerDependencies?.[process.argv[1]] ?? ""' "$package")
     if [[ -n $range && -n $latest ]] && ! node --input-type=module -e '
       import { caretAdmits } from "./test/unit/release.ts";

@@ -6,6 +6,27 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the packag
 
 ## [Unreleased]
 
+### Added
+
+- The icons layer,
+  [spike-html-hosting-icons](https://github.com/JaimeStill/spike-html-hosting-icons), as a peer at
+  `^0.1.0`, beside the foundation: a site declares it beside the components, pinned by its tag.
+  Each element imports only the glyphs it shows, one icons module apiece.
+
+### Changed
+
+- `sl-section-tree`'s Previous and Next buttons show Octicons' `arrow-up-16` and `arrow-down-16`
+  with their key hints H and L in a `<kbd>`, the words no longer shown. Their accessible names stay
+  "Previous" and "Next", now from their `aria-label`, and the keys help dialog still lists the
+  bindings as "Previous section" and "Next section".
+- `sl-drawer`'s Close button shows Octicons' `x-16` alone. It is still named "Close" and the
+  label, "Close Pages", by its text, which is now visually hidden, the `close` slot's replacement
+  included.
+- The README's site shell snippet shows each header button's glyph marker,
+  `<svg data-icon="octicon/<name>">`, which spike-html-hosting-sdk fills at build:
+  `list-unordered-16` for Pages, `question-16` for Help, `paintbrush-16` for Theme, and `x-16` for
+  the keys help dialog's Close, each with its key hint and its name in its `aria-label`.
+
 ## [0.3.0] - 2026-11-06
 
 ### Added

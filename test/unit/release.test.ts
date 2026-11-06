@@ -88,6 +88,8 @@ describe("release pack", () => {
 
   const foundation = "@jaimestill/spike-html-apps-foundation";
   const github = "github:JaimeStill/spike-html-apps-foundation";
+  const icons = "@jaimestill/spike-html-hosting-icons";
+  const iconsGithub = "github:JaimeStill/spike-html-hosting-icons";
   const faults: Record<string, [Change, string]> = {
     "a source .css with no built copy": [
       remove("dist/section-tree.css"),
@@ -217,6 +219,42 @@ describe("release pack", () => {
     "no devDependency": [
       (_, copy) => delete copy.devDependencies[foundation],
       `package.json doesn't declare devDependency ${foundation}`,
+    ],
+    // The icons, the other peer, take the same forms as the foundation.
+    "the icons in dependencies": [
+      (_, copy) => (copy.dependencies[icons] = `${iconsGithub}#v0.1.0`),
+      `package.json declares ${icons} in dependencies, not as a peer`,
+    ],
+    "an icons peer by a git spec": [
+      (_, copy) => (copy.peerDependencies[icons] = `${iconsGithub}#v0.1.0`),
+      `package.json declares peer ${icons} ${iconsGithub}#v0.1.0, not a caret range`,
+    ],
+    "no icons peer": [
+      (_, copy) => delete copy.peerDependencies[icons],
+      `package.json doesn't declare peer ${icons}`,
+    ],
+    "no peers, the icons among them": [
+      (_, copy: Partial<Packed>) => delete copy.peerDependencies,
+      `package.json doesn't declare peer ${icons}`,
+    ],
+    "the icons devDependency by a branch": [
+      (_, copy) => (copy.devDependencies[icons] = `${iconsGithub}#main`),
+      `package.json declares devDependency ${icons} ${iconsGithub}#main, not an exact release tag`,
+    ],
+    "the icons devDependency from the foundation's repository": [
+      (_, copy) => (copy.devDependencies[icons] = `${github}#v0.1.0`),
+      `package.json declares devDependency ${icons} ${github}#v0.1.0, not an exact release tag`,
+    ],
+    "no icons devDependency": [
+      (_, copy) => delete copy.devDependencies[icons],
+      `package.json doesn't declare devDependency ${icons}`,
+    ],
+    "an icons devDependency outside its peer range": [
+      (_, copy) => {
+        copy.peerDependencies[icons] = "^0.1.0";
+        copy.devDependencies[icons] = `${iconsGithub}#v0.2.0`;
+      },
+      `package.json's devDependency ${icons} ${iconsGithub}#v0.2.0 is outside its peer range ^0.1.0`,
     ],
     "a missing dependency": [
       (_, copy) => delete copy.dependencies.lit,

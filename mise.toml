@@ -93,7 +93,7 @@ description = "Run every check; reads no network; writes dist/"
 depends = ["lint", "types", "build", "test:unit", "test:browser"]
 
 [tasks.install]
-description = "Install the pins and node_modules, the foundation and the tooling at their tags; reads the network"
+description = "Install the pins and node_modules, the foundation, the icons, and the tooling at their tags; reads the network"
 run = ["mise install", "pnpm install --frozen-lockfile"]
 
 # Never a dependency of check: a reviewer's look at the fixture pages, not a test. The capture is
@@ -108,6 +108,6 @@ raw = true
 run = "BROWSER_EXECUTABLE=$(mise which chrome-headless-shell) pnpm exec spike-html-apps-screenshots scripts/screenshots.config.ts"
 
 [tasks.currency]
-description = "Report every mise tool, package.json pin, action pin, the foundation's and the tooling's tags, and the foundation's peer range behind its latest, exiting nonzero if any"
+description = "Report every mise tool, package.json pin, action pin, the foundation's, the icons', and the tooling's tags, and the peers' ranges behind its latest, exiting nonzero if any"
 run = "scripts/currency.sh"
 quiet = true
