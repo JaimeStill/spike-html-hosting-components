@@ -1,7 +1,8 @@
-// The icons layer's glyphs as a button shows them, which the section tree's and the drawer's cases
-// share: whether the button holds the very glyph the icons module exports, hidden from the
-// accessibility tree and drawn in the button's text color, so a case fails when a glyph is missing
-// or another; and the accessible names the page's accessibility tree exposes for a role.
+// The icons layer's glyphs as a button shows them, which the section tree's, the drawer's, and the
+// site's cases share: whether the button holds the very glyph the icons module exports, hidden
+// from the accessibility tree and drawn in the button's text color, so a case fails when a glyph
+// is missing or another; and the accessible names the page's accessibility tree exposes for a
+// role.
 
 import assert from "node:assert/strict";
 
@@ -69,13 +70,14 @@ export function assertGlyph(shown: Glyph, what: string): void {
 }
 
 /** A node of the page's accessibility tree, as Accessibility.getFullAXTree gives it. */
-interface AXNode {
+export interface AXNode {
   ignored: boolean;
   role?: { value: string };
   name?: { value: string };
 }
 
-/** The names of the nodes of `role` the page's accessibility tree exposes, shadow roots included. */
+/** The names of the nodes of `role` the page's accessibility tree exposes, shadow roots
+ * included. */
 export async function exposed(page: Page, role: string): Promise<string[]> {
   const { nodes }: { nodes: AXNode[] } = await page.cdp("Accessibility.getFullAXTree", {});
   return nodes

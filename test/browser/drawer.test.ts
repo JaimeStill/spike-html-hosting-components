@@ -10,8 +10,8 @@
 // covering the viewport edge to edge, its header in view while its content scrolls, the page
 // behind inert and focus inside, closed by its Close button, Escape, close(), toggle(), or open,
 // focus returned to the opener; the Close button showing the x-16 glyph alone, named Close and the
-// label by its visually hidden text, which its slot replaces; open and close sent once each, bubbling and composed, never on a mode switch or on removal,
-// which closes it, a drawer put back closed and opening modally again; a switch in either
+// label by its visually hidden text, which its slot replaces; open and close sent once each,
+// bubbling and composed, never on a mode switch or on removal, which closes it, a drawer put back closed and opening modally again; a switch in either
 // direction, by the viewport or by dock, keeping the very same slotted elements, never
 // disconnected, and what was typed and counted in them; the slide's transition, absent under
 // reduced motion and on a switch; and the slide from the inline-start edge, the left, or the right
@@ -30,7 +30,7 @@ import type { Server } from "@jaimestill/spike-html-apps-tooling/server.js";
 
 import x from "@jaimestill/spike-html-hosting-icons/octicon/x-16";
 
-import { assertGlyph, glyph } from "./support/glyphs.ts";
+import { assertGlyph, exposed, glyph, type AXNode } from "./support/glyphs.ts";
 import { served } from "./support/served.ts";
 
 /** An event the document heard from the drawer. */
@@ -64,13 +64,6 @@ interface Shown {
   focused: string | null;
   sent: string[];
   heard: Heard[];
-}
-
-/** A node of the page's accessibility tree, as Accessibility.getFullAXTree gives it. */
-interface AXNode {
-  ignored: boolean;
-  role?: { value: string };
-  name?: { value: string };
 }
 
 /** The drawer's Close button, in a page expression. */
@@ -254,13 +247,6 @@ describe("drawer", { timeout: 60_000 }, () => {
   // Resolves once the close events queued so far have reached the document.
   const closedHeard = (count: number) =>
     until(page, `window.heard.filter((e) => e.type === "close").length >= ${count}`);
-  // The names of the nodes of the role the accessibility tree exposes.
-  const exposed = async (role: string): Promise<string[]> => {
-    const { nodes }: { nodes: AXNode[] } = await page.cdp("Accessibility.getFullAXTree", {});
-    return nodes
-      .filter((node) => !node.ignored && node.role?.value === role)
-      .map((node) => node.name?.value ?? "");
-  };
   // The Close button's visually hidden text, its name's: its box, its clip, and its text in the
   // shadow tree, the close slot's fallback and the label.
   const closeText = (): Promise<{ box: number[]; clip: string; text: string }> =>
@@ -307,8 +293,8 @@ describe("drawer", { timeout: 60_000 }, () => {
       [shown.mode, shown.wrapper, shown.dialogOpen, shown.open, shown.visible],
       ["docked", "aside", false, false, true],
     );
-    assert.deepEqual(await exposed("complementary"), ["Documents"]);
-    assert.deepEqual(await exposed("dialog"), [], "no dialog in the tree");
+    assert.deepEqual(await exposed(page, "complementary"), ["Documents"]);
+    assert.deepEqual(await exposed(page, "dialog"), [], "no dialog in the tree");
     assert.ok(shown.box.width > 0, "the docked aside takes space");
     assert.equal(shown.focused, null, "docking moves no focus into the content");
     assert.equal(await pageLive(), true, "the page takes focus");
@@ -348,8 +334,8 @@ describe("drawer", { timeout: 60_000 }, () => {
       label: null,
     });
     // The fixture page has no heading of its own.
-    assert.deepEqual(await exposed("heading"), ["Documents"]);
-    const buttons = await exposed("button");
+    assert.deepEqual(await exposed(page, "heading"), ["Documents"]);
+    const buttons = await exposed(page, "button");
     assert.ok(!buttons.some((name) => name.startsWith("Close")), `no Close button: ${buttons}`);
     assert.equal(
       await page.evaluate(`document.querySelector("sl-drawer").shadowRoot.querySelector("button")`),
@@ -578,10 +564,10 @@ describe("drawer", { timeout: 60_000 }, () => {
       [shown.mode, shown.dialogOpen, shown.modal, shown.open, shown.attribute, shown.visible],
       ["drawer", true, true, true, true, true],
     );
-    assert.deepEqual(await exposed("dialog"), ["Documents"]);
+    assert.deepEqual(await exposed(page, "dialog"), ["Documents"]);
     // The fixture page has no heading of its own: the dialog's is the one exposed, and the
     // shadow tree holds no other.
-    assert.deepEqual(await exposed("heading"), ["Documents"]);
+    assert.deepEqual(await exposed(page, "heading"), ["Documents"]);
     assert.deepEqual(await headings(), {
       texts: ["Documents"],
       inWrapper: true,
@@ -639,10 +625,10 @@ describe("drawer", { timeout: 60_000 }, () => {
   test("the Close button, named Close Documents, closes it, focus returns to the opener, and close goes out once", async () => {
     await mount(NARROW);
     await openByKeyboard();
-    assert.ok((await exposed("button")).includes("Close Documents"), "the button's name");
+    assert.ok((await exposed(page, "button")).includes("Close Documents"), "the button's name");
     // It shows the x-16 glyph alone: its name's text, the close slot's and the label, is visually
     // hidden, a 1px box clipped away.
-    assertGlyph(await glyph(page, `${CLOSE}`, x), "Close");
+    assertGlyph(await glyph(page, CLOSE, x), "Close");
     assert.deepEqual(await closeText(), {
       box: [1, 1],
       clip: "inset(50%)",
@@ -662,7 +648,7 @@ describe("drawer", { timeout: 60_000 }, () => {
   test("a replacement for the Close button's text, through its close slot, leads its name, visually hidden beside the glyph", async () => {
     await mount(NARROW, {}, '<span slot="close" id="fermer">Fermer</span>');
     await openByKeyboard();
-    const names = await exposed("button");
+    const names = await exposed(page, "button");
     assert.ok(names.includes("Fermer Documents"), `the button's name: ${names}`);
     assert.ok(!names.some((name) => name.startsWith("Close")), "the default text is replaced");
     // Slotted into the Close button's close slot, the replacement is clipped away with the label.
@@ -672,7 +658,7 @@ describe("drawer", { timeout: 60_000 }, () => {
     assert.ok(slotted, "the replacement fills the Close button's close slot");
     const { box, clip } = await closeText();
     assert.deepEqual([box, clip], [[1, 1], "inset(50%)"]);
-    assertGlyph(await glyph(page, `${CLOSE}`, x), "Close");
+    assertGlyph(await glyph(page, CLOSE, x), "Close");
   });
 
   test("Escape closes it, focus returns to the opener, and close goes out once", async () => {
@@ -879,9 +865,12 @@ describe("drawer", { timeout: 60_000 }, () => {
     );
     assert.deepEqual(await same(), kept, "open at narrow, resized wide");
     // The heading follows the mode: the aside's own, the one exposed, with no Close button.
-    assert.deepEqual(await exposed("heading"), ["Documents"], "docked, one heading");
-    assert.deepEqual(await exposed("complementary"), ["Documents"]);
-    assert.ok(!(await exposed("button")).includes("Close Documents"), "docked, no Close button");
+    assert.deepEqual(await exposed(page, "heading"), ["Documents"], "docked, one heading");
+    assert.deepEqual(await exposed(page, "complementary"), ["Documents"]);
+    assert.ok(
+      !(await exposed(page, "button")).includes("Close Documents"),
+      "docked, no Close button",
+    );
     assert.deepEqual((await headings()).texts, ["Documents"]);
     // Back to narrow: closed, with no event.
     await resize(NARROW);
@@ -908,10 +897,10 @@ describe("drawer", { timeout: 60_000 }, () => {
     assert.deepEqual([shown.modal, shown.focused], [true, "drawer button"]);
     // And back in the dialog's header, beside its Close button, the one heading still.
     await slid();
-    assert.deepEqual(await exposed("heading"), ["Documents"], "a drawer again, one heading");
-    assert.deepEqual(await exposed("dialog"), ["Documents"]);
-    assert.ok((await exposed("button")).includes("Close Documents"));
-    assert.deepEqual(await exposed("complementary"), [], "no landmark left behind");
+    assert.deepEqual(await exposed(page, "heading"), ["Documents"], "a drawer again, one heading");
+    assert.deepEqual(await exposed(page, "dialog"), ["Documents"]);
+    assert.ok((await exposed(page, "button")).includes("Close Documents"));
+    assert.deepEqual(await exposed(page, "complementary"), [], "no landmark left behind");
     await page.evaluate("new Promise((resolve) => setTimeout(resolve, 50))");
     assert.deepEqual((await read()).sent, ["open", "open"], "only the opens went out");
   });
