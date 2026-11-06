@@ -6,6 +6,20 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the packag
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-06
+
+### Added
+
+- `sl-site-nav`'s `src`, optional, a URL naming a JSON list of sites every site reads in place of
+  `SITES`, so a site added to it appears on every site's nav at once, where a site deployed with
+  an older release listed only that release's `SITES`. The list is a non-empty array of
+  `{ repository, label }`, each a non-empty string, fetched with `fetch()`. The element paints
+  `SITES` first and replaces it with the fetched list once the fetch succeeds; a failed fetch, an
+  error status, or a list that isn't JSON, is empty, or has a malformed entry keeps `SITES`. A
+  changed `src` renders `SITES` and fetches its own list, a response for an older `src` dropped,
+  and a removed one renders `SITES` again and fetches nothing. With no `src` the element is as it
+  was.
+
 ## [0.2.2] - 2026-11-05
 
 ### Changed

@@ -7,6 +7,8 @@
      render-blocking. Its palettes are flexoki, the default, and primer, so a stored palette the
      architecture site registers and this one doesn't, catppuccin or everforest, falls back to
      flexoki here and stays stored.
+     It loads the built site nav, so it is the site deployed behind the fourth fixture site, whose
+     nav lists a site this one's doesn't. The page's ?src=, when it has one, becomes the nav's src.
      window.errors collects every error and unhandled rejection the page raises; window.ready
      settles once the site nav has rendered. The import map is the architecture site's.
      Adapted from sites/spike-html-hosting-architecture/index.html: its loading, its error log, and
@@ -71,6 +73,11 @@
   <body>
     <header>
       <sl-site-nav></sl-site-nav>
+      <script>
+        // The page's ?src=, when it has one, becomes the nav's src before the nav upgrades.
+        const src = new URLSearchParams(location.search).get("src");
+        if (src !== null) document.currentScript.previousElementSibling.setAttribute("src", src);
+      </script>
       <button type="button" commandfor="theme" command="--open" data-keys="t">Theme</button>
     </header>
     <main>
