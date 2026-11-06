@@ -6,6 +6,28 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the packag
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-05
+
+### Fixed
+
+- `sl-section-tree`'s H and L no longer skip a section or stall on a page of short sections. A
+  move's stop is its target: marked while the page rests where the move left it, and the stop the
+  next move counts from, where at the end of the move's scroll the tree dropped it for the section
+  at the reading line, the next one whenever the stop was shorter than the line's distance from
+  the top. Once the reader scrolls by other means, the wheel, the keyboard, a link to no listed
+  section, or the scrollbar, the mark follows the reading line again and the next move counts
+  from the section in view.
+- `sl-section-tree` marks the section a followed link reaches, where a link to a short section,
+  or one near the page's end, marked a neighbour by the reading line. A click or Enter on one of
+  the tree's own links, and any change of the URL's fragment to a listed heading's id, by a link
+  elsewhere on the page, a script, or the history, make that section the held stop, as an H or L
+  move to it would; the link's navigation and scroll stay the browser's.
+- `sl-section-tree`'s mark no longer freezes after a smooth move in an engine that fires no
+  `scrollend`, as Safari may. A move's smooth scroll, or a followed link's, ends at its
+  `scrollend`, or, with none, once the page has stood still for five frames, or after three
+  seconds at most, whichever comes first, and settles once, where a reader's scroll after it was
+  taken for the move's own and the mark stayed on the move's stop.
+
 ## [0.2.0] - 2026-11-05
 
 ### Added

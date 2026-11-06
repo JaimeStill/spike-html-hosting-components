@@ -79,14 +79,24 @@ GitHub's heading id, with a nested `ul` or `ol` for the `h3`s under it:
 - H and L move to the previous and the next stop, the page's top then each section, and wrap: L
   from the top goes to the first section and past the last back to the top; H from the top goes
   to the last section and from the first to the top. A move to a section scrolls its heading to
-  the top of the viewport, and one to the top scrolls the page to 0. They are bound by
-  `register()` in the foundation's keys module, so its help dialog lists them as "Previous
-  section" and "Next section" and its off switch, which covers character keys, turns them off.
-  Every arrow key stays the browser's own scrolling, in the page and in any region that scrolls
-  sideways. The Previous and Next buttons, with the bracketed key hints [H] and [L], move the same
-  way whatever the setting, are disabled only when the tree names no section, and carry
-  `aria-keyshortcuts` while the keys are on. A move scrolls smoothly unless the reader asks for
-  reduced motion.
+  the top of the viewport, and one to the top scrolls the page to 0. Each move counts from the
+  stop the last one reached, which stays marked while the page rests where the move left it, even
+  a short section whose next heading is already past the reading line, or the last section, which
+  the page can't scroll to the line. A link followed to a section the tree lists reaches it as a
+  move would: a click or Enter on one of the tree's own links, and any change of the URL's
+  fragment to a listed heading's id, by a link elsewhere on the page, a script, or the history,
+  make that section the held stop, while the link's navigation and scroll, with `:target` and its
+  scroll margin, stay the browser's. A page loaded with a fragment holds no stop. Once the reader
+  scrolls by other means, the mark follows the reading line again and the next move counts from
+  the section in view. H and L are bound by `register()` in the foundation's keys module, so its
+  help dialog lists them as "Previous section" and "Next section" and its off switch, which
+  covers character keys, turns them off. Every arrow key stays the browser's own scrolling, in the
+  page and in any region that scrolls sideways. The Previous and Next buttons, with the bracketed
+  key hints [H] and [L], move the same way whatever the setting, are disabled only when the tree
+  names no section, and carry `aria-keyshortcuts` while the keys are on. A move scrolls smoothly
+  unless the reader asks for reduced motion; its scroll ends at its `scrollend`, or, in an engine
+  that fires none, as Safari may, once the page has stood still for five frames, or after three
+  seconds at most, whichever comes first.
 - `dock`, a CSS length, `70rem` by default (exported as `DOCK`), is the width at which the tree is
   a column, and wider: where one 16rem side column fits beside a reading column of 80ch in the
   foundation's default mono type. A site whose layout docks the column elsewhere sets its own,

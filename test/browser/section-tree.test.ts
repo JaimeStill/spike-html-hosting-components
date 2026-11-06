@@ -10,7 +10,16 @@
 // a heading a move or a link scrolls to below it and put back as it leaves; no link text breaks
 // inside a word, whatever the page inherits; the progress bar runs on the root's scroll timeline,
 // guarded by @supports; and the tree renders in every profile the foundation's full entry
-// registers, light and dark, at 1280 and 390 px, with no sideways scroll and its focus drawn.
+// registers, light and dark, at 1280 and 390 px, with no sideways scroll and its focus drawn. On
+// test/fixtures/section-tree-short.html, whose sections are shorter than the reading line's
+// distance from the top, L and H visit every stop in order, each move counting from the stop the
+// last one reached, at 1280 and 390 px, instant and smooth, and with a smooth move's scroll cut
+// short by the next, and with no scrollend, as an engine may fire none, the moves still cycle and
+// a reader's scroll still takes the mark; the mark follows a reader's scroll as it happens, and
+// after it the next move counts from the section in view; and a link followed to a listed section
+// holds it as a move would, a tree link clicked or entered at 1280 px, the fragment already in the
+// URL included, and a fragment changed by a script or a link elsewhere on the page at 1280 and
+// 390 px, where the tree's links are hidden in the bar.
 
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
@@ -24,6 +33,9 @@ import { registry as read, resize, runs, type Registry } from "./support/profile
 import { served } from "./support/served.ts";
 
 const FIXTURE = "/test/fixtures/section-tree.html";
+
+/** The page of short sections, whose next heading is past the line when a move lands. */
+const SHORT = "/test/fixtures/section-tree-short.html";
 
 /** The tree's default dock, 70rem, at the initial font size, in px. */
 const DOCK = 1120;
@@ -48,6 +60,7 @@ const KEYS = {
   ArrowRight: { key: "ArrowRight", code: "ArrowRight", windowsVirtualKeyCode: 39 },
   ArrowDown: { key: "ArrowDown", code: "ArrowDown", windowsVirtualKeyCode: 40 },
   Tab: { key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 },
+  Enter: { key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, text: "\r" },
   "?": { key: "?", code: "Slash", windowsVirtualKeyCode: 191, modifiers: 8, text: "?" },
 };
 
@@ -116,16 +129,23 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
     await server?.stop();
   });
 
-  /** Loads the fixture at the viewport's size and motion, its keys settings cleared, rendered. */
+  /**
+   * Loads a fixture, section-tree.html by default, at the viewport's size and motion, its keys
+   * settings cleared, rendered.
+   */
   async function load(
-    { width = 1280, reduce = true }: { width?: number; reduce?: boolean } = {},
+    {
+      width = 1280,
+      reduce = true,
+      fixture = FIXTURE,
+    }: { width?: number; reduce?: boolean; fixture?: string } = {},
     query = "",
   ) {
     await resize(page, width);
     await motion(page, reduce ? "reduce" : "no-preference");
-    await page.goto(`${server.origin}${FIXTURE}${query}`);
+    await page.goto(`${server.origin}${fixture}${query}`);
     await page.evaluate(`localStorage.clear()`);
-    await page.goto(`${server.origin}${FIXTURE}${query}`);
+    await page.goto(`${server.origin}${fixture}${query}`);
     await page.evaluate(`window.ready.then(() => ${SETTLED})`);
   }
 
@@ -563,6 +583,328 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       assert.equal(shown.links.every(Boolean), true);
       assert.equal(shown.padding, "");
     });
+  });
+
+  describe("on a page of short sections", () => {
+    /** Loads the short sections' fixture at the viewport's width and motion, as load() does. */
+    const short = ({ width, reduce }: { width: number; reduce: boolean }) =>
+      load({ width, reduce, fixture: SHORT });
+
+    /**
+     * Where a move to stop `index` rests the root's scroll, -1 the top: the heading at the
+     * viewport's top, less its scroll margin and the root's scroll padding, within the root's
+     * scroll range.
+     */
+    const rest = (index: number): Promise<number> =>
+      page.evaluate(`(() => {
+        if (${index} === -1) return 0;
+        const root = document.documentElement;
+        const heading = ${HEADINGS}[${index}];
+        const margin = parseFloat(getComputedStyle(heading).scrollMarginBlockStart) || 0;
+        const padding = parseFloat(getComputedStyle(root).scrollPaddingBlockStart) || 0;
+        const top = heading.getBoundingClientRect().top + scrollY - margin - padding;
+        return Math.min(Math.max(top, 0), root.scrollHeight - root.clientHeight);
+      })()`);
+
+    /** The section the reading line marks, a third of the way down: -1 at the top or above it. */
+    const atLine = (): Promise<number> =>
+      page.evaluate(`scrollY < 1 ? -1 : ${HEADINGS}.findLastIndex(
+        (heading) => heading.getBoundingClientRect().top <= innerHeight * 0.34 + 1)`);
+
+    /** Presses `key`, then waits for the page to rest at stop `index`, and a frame past it. */
+    async function move(key: "h" | "l", index: number): Promise<void> {
+      const want = await rest(index);
+      await press(page, key);
+      await until(page, `Math.abs(scrollY - ${want}) <= 1`);
+      await still(page);
+      await page.evaluate(SETTLED);
+    }
+
+    for (const width of [1280, 390]) {
+      test(`the fixture's sections are short and its last can't reach the top, at ${width}px`, async () => {
+        await short({ width, reduce: true });
+        const count: number = await page.evaluate(`${LINKS}.length`);
+        // From the first heading at the top, the second is already past the reading line.
+        await page.evaluate(
+          `${HEADINGS}[0].scrollIntoView({ block: "start", behavior: "instant" })`,
+        );
+        await still(page);
+        assert.ok(
+          (await headingTop(page, 1)) < (await page.evaluate("innerHeight * 0.34")),
+          "the second heading is above the line",
+        );
+        await page.evaluate(
+          `${HEADINGS}[${count - 1}].scrollIntoView({ block: "start", behavior: "instant" })`,
+        );
+        await still(page);
+        assert.ok((await headingTop(page, count - 1)) > 50, "the last heading stays below the top");
+      });
+
+      for (const reduce of [true, false]) {
+        const named = `at ${width}px${reduce ? "" : ", scrolling smoothly"}`;
+
+        test(`L from the top visits every stop in order, then wraps to the top, ${named}`, async () => {
+          await short({ width, reduce });
+          const count: number = await page.evaluate(`${LINKS}.length`);
+          for (let i = 0; i < count; i++) {
+            await move("l", i);
+            assert.deepEqual(await current(page), { index: i, marked: 1 }, `L to ${i}`);
+            if (i < count - 1) {
+              const top = await headingTop(page, i);
+              const bottom = width < DOCK ? await treeBottom(page) : 0;
+              assert.ok(
+                Math.abs(top - bottom) <= 2,
+                `heading ${i} at ${top}, the top at ${bottom}`,
+              );
+            }
+          }
+          await move("l", -1);
+          assert.equal(await page.evaluate("scrollY"), 0, "past the last, the page is at its top");
+          assert.deepEqual(await current(page), { index: -1, marked: 0 }, "past the last");
+          await move("l", 0);
+          assert.deepEqual(await current(page), { index: 0, marked: 1 }, "and round to the first");
+        });
+
+        test(`H from the top visits every stop in reverse, then wraps to the top, ${named}`, async () => {
+          await short({ width, reduce });
+          const count: number = await page.evaluate(`${LINKS}.length`);
+          for (let i = count - 1; i >= 0; i--) {
+            await move("h", i);
+            assert.deepEqual(await current(page), { index: i, marked: 1 }, `H to ${i}`);
+          }
+          await move("h", -1);
+          assert.equal(
+            await page.evaluate("scrollY"),
+            0,
+            "before the first, the page is at its top",
+          );
+          assert.deepEqual(await current(page), { index: -1, marked: 0 });
+          await move("h", count - 1);
+          assert.deepEqual(
+            await current(page),
+            { index: count - 1, marked: 1 },
+            "round to the last",
+          );
+        });
+      }
+
+      test(`L pressed again before a smooth move ends counts from that move's stop, at ${width}px`, async () => {
+        await short({ width, reduce: false });
+        const want = await rest(3);
+        // Four presses, each before the last one's smooth scroll has ended.
+        for (let i = 0; i < 4; i++) await press(page, "l");
+        await until(page, `Math.abs(scrollY - ${want}) <= 1`);
+        await still(page);
+        await page.evaluate(SETTLED);
+        assert.deepEqual(await current(page), { index: 3, marked: 1 }, "four Ls from the top");
+      });
+
+      test(`with no scrollend, smooth moves still cycle and a reader's scroll still takes the mark, at ${width}px`, async () => {
+        await short({ width, reduce: false });
+        // An engine that fires no scrollend, as Safari may: the event stopped at the window, in
+        // its capture phase, before the document's listeners.
+        await page.evaluate(
+          `addEventListener("scrollend", (event) => event.stopImmediatePropagation(), { capture: true })`,
+        );
+        const count: number = await page.evaluate(`${LINKS}.length`);
+        for (let i = 0; i < count; i++) {
+          await move("l", i);
+          assert.deepEqual(await current(page), { index: i, marked: 1 }, `L to ${i}`);
+        }
+        await move("l", -1);
+        assert.deepEqual(await current(page), { index: -1, marked: 0 }, "past the last");
+        for (let i = 0; i < 3; i++) await move("l", i);
+        await page.cdp("Input.dispatchMouseEvent", {
+          type: "mouseWheel",
+          x: width / 2,
+          y: 400,
+          deltaX: 0,
+          deltaY: 1200,
+        });
+        await until(page, `scrollY > ${await rest(2)} + 100`);
+        await still(page);
+        // The mark takes the line's section once the move's scroll is taken to have ended.
+        await until(
+          page,
+          `${LINKS}.findIndex((a) => a.getAttribute("aria-current") === "location") === ${HEADINGS}
+            .findLastIndex((heading) => heading.getBoundingClientRect().top <= innerHeight * 0.34 + 1)`,
+          2000,
+        );
+        const wheeled = await atLine();
+        assert.ok(wheeled > 2, `the wheel took the line past the move's target, to ${wheeled}`);
+        assert.deepEqual(await current(page), { index: wheeled, marked: 1 }, "the mark follows");
+        await move("l", wheeled + 1);
+        assert.deepEqual(
+          await current(page),
+          { index: wheeled + 1, marked: 1 },
+          "L counts from it",
+        );
+      });
+
+      test(`the mark follows a reader's scroll as it happens, before the scroll ends, at ${width}px`, async () => {
+        await short({ width, reduce: true });
+        for (let i = 0; i < 3; i++) await move("l", i);
+        // Read at the scroll's own event, which reaches the window after the document's listeners
+        // and before scrollend or any observer's call.
+        const seen: { scrolled: number; line: number } =
+          await page.evaluate(`new Promise((resolve) => {
+          addEventListener("scroll", () => resolve({
+            scrolled: ${LINKS}.findIndex((a) => a.getAttribute("aria-current") === "location"),
+            line: ${HEADINGS}.findLastIndex(
+              (heading) => heading.getBoundingClientRect().top <= innerHeight * 0.34 + 1),
+          }), { once: true });
+          scrollBy({ top: 1200, behavior: "instant" });
+        })`);
+        assert.ok(
+          seen.line > 2,
+          `the scroll took the line past the move's target, to ${seen.line}`,
+        );
+        assert.equal(seen.scrolled, seen.line, "the mark is the line's at the scroll's event");
+      });
+
+      test(`after a reader's scroll, the next move counts from the section in view, at ${width}px`, async () => {
+        await short({ width, reduce: true });
+        for (let i = 0; i < 3; i++) await move("l", i);
+        // The wheel, over the article.
+        await page.cdp("Input.dispatchMouseEvent", {
+          type: "mouseWheel",
+          x: width / 2,
+          y: 400,
+          deltaX: 0,
+          deltaY: 1200,
+        });
+        await until(page, `scrollY > ${await rest(2)} + 100`);
+        await still(page);
+        await page.evaluate(SETTLED);
+        const wheeled = await atLine();
+        assert.ok(wheeled > 2, `the wheel took the line past the move's target, to ${wheeled}`);
+        assert.deepEqual(await current(page), { index: wheeled, marked: 1 }, "the mark follows");
+        await move("l", wheeled + 1);
+        assert.deepEqual(
+          await current(page),
+          { index: wheeled + 1, marked: 1 },
+          "L counts from it",
+        );
+        // A scrollbar's drag, as a script's scroll, back up the page into the first section.
+        await page.evaluate(`scrollTo({ top: ${await rest(0)} + 10, behavior: "instant" })`);
+        await still(page);
+        await page.evaluate(SETTLED);
+        const dragged = await atLine();
+        assert.ok(dragged >= 1 && dragged < wheeled, `the scroll took the line to ${dragged}`);
+        assert.deepEqual(await current(page), { index: dragged, marked: 1 }, "the mark follows");
+        await move("h", dragged - 1);
+        assert.deepEqual(
+          await current(page),
+          { index: dragged - 1, marked: 1 },
+          "H counts from it",
+        );
+      });
+
+      for (const reduce of [true, false]) {
+        const named = `at ${width}px${reduce ? "" : ", scrolling smoothly"}`;
+
+        test(`a fragment changed to a listed section holds it, as a move to it would, ${named}`, async () => {
+          await short({ width, reduce });
+          const count: number = await page.evaluate(`${LINKS}.length`);
+          // A short section, whose next heading is past the line once it is at the top.
+          await follow(`location.hash = ${LINKS}[2].hash`, 2);
+          assert.ok((await atLine()) > 2, "the reading line marks a later section");
+          assert.deepEqual(await current(page), { index: 2, marked: 1 }, "the fragment's section");
+          await move("l", 3);
+          assert.deepEqual(await current(page), { index: 3, marked: 1 }, "L counts from it");
+          // The last section, which the page can't scroll to the line.
+          await follow(`location.hash = ${LINKS}[${count - 1}].hash`, count - 1);
+          assert.ok((await atLine()) < count - 1, "the reading line marks an earlier section");
+          assert.deepEqual(
+            await current(page),
+            { index: count - 1, marked: 1 },
+            "the fragment's section",
+          );
+          await move("l", -1);
+          assert.deepEqual(await current(page), { index: -1, marked: 0 }, "L counts from it");
+          // A link elsewhere on the page, as the history's step back would take it.
+          await follow(
+            `(() => {
+              const a = document.createElement("a");
+              a.href = ${LINKS}[1].hash;
+              document.querySelector("main").append(a);
+              a.click();
+            })()`,
+            1,
+          );
+          assert.deepEqual(await current(page), { index: 1, marked: 1 }, "the link's section");
+          await move("h", 0);
+          assert.deepEqual(await current(page), { index: 0, marked: 1 }, "H counts from it");
+        });
+      }
+    }
+
+    for (const reduce of [true, false]) {
+      const named = `at 1280px${reduce ? "" : ", scrolling smoothly"}`;
+
+      test(`a tree link clicked or entered holds its section, as a move to it would, ${named}`, async () => {
+        await short({ width: 1280, reduce });
+        const count: number = await page.evaluate(`${LINKS}.length`);
+        // A short section, whose next heading is past the line once it is at the top.
+        await follow(click(2), 2);
+        assert.ok((await atLine()) > 2, "the reading line marks a later section");
+        assert.deepEqual(await current(page), { index: 2, marked: 1 }, "the link's section");
+        await move("l", 3);
+        assert.deepEqual(await current(page), { index: 3, marked: 1 }, "L counts from it");
+        // The last section, which the page can't scroll to the line.
+        await follow(click(count - 1), count - 1);
+        assert.ok((await atLine()) < count - 1, "the reading line marks an earlier section");
+        assert.deepEqual(
+          await current(page),
+          { index: count - 1, marked: 1 },
+          "the link's section",
+        );
+        await move("h", count - 2);
+        assert.deepEqual(await current(page), { index: count - 2, marked: 1 }, "H counts from it");
+        // Enter on a focused link.
+        await follow(async () => {
+          await page.evaluate(`${LINKS}[1].focus()`);
+          await press(page, "Enter");
+        }, 1);
+        assert.deepEqual(await current(page), { index: 1, marked: 1 }, "the entered section");
+        await move("l", 2);
+        // The link to the fragment the URL already holds, which changes no fragment, after a
+        // scroll away from it.
+        await page.evaluate(`scrollBy({ top: 300, behavior: "instant" })`);
+        await still(page);
+        await page.evaluate(SETTLED);
+        assert.notEqual((await current(page)).index, 1, "the scroll released the hold");
+        await follow(click(1), 1);
+        assert.deepEqual(await current(page), { index: 1, marked: 1 }, "the link's section again");
+        await move("h", 0);
+        assert.deepEqual(await current(page), { index: 0, marked: 1 }, "H counts from it");
+      });
+    }
+
+    /** A primary click, by the mouse, at the middle of tree link `index`. */
+    const click = (index: number) => async () => {
+      const { x, y }: { x: number; y: number } = await page.evaluate(`(() => {
+        const box = ${LINKS}[${index}].getBoundingClientRect();
+        return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+      })()`);
+      for (const type of ["mousePressed", "mouseReleased"]) {
+        await page.cdp("Input.dispatchMouseEvent", { type, x, y, button: "left", clickCount: 1 });
+      }
+    };
+
+    /**
+     * Follows a link to stop `index` by `action`, a page expression or a step of the test's own,
+     * then waits for the fragment to name its heading and the page to rest where the browser's
+     * fragment scroll, to the :target's scroll margin, lands it, and a frame past it.
+     */
+    async function follow(action: string | (() => Promise<void>), index: number): Promise<void> {
+      if (typeof action === "string") await page.evaluate(action);
+      else await action();
+      await until(page, `location.hash === ${LINKS}[${index}].hash`);
+      await until(page, `Math.abs(scrollY - ${await rest(index)}) <= 1`);
+      await still(page);
+      await page.evaluate(SETTLED);
+    }
   });
 
   describe("the link text", () => {
