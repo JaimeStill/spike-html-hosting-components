@@ -18,7 +18,7 @@ foundation's sheets by package name reaches the components' shadow roots too. A 
 their tags:
 
 ```
-pnpm add github:JaimeStill/spike-html-hosting-components#v0.2.2 github:JaimeStill/spike-html-apps-foundation#v0.3.0
+pnpm add github:JaimeStill/spike-html-hosting-components#v0.3.0 github:JaimeStill/spike-html-apps-foundation#v0.3.0
 ```
 
 ## Use
@@ -193,12 +193,39 @@ holds, is "Sites" by default. It takes no content:
 <sl-site-nav label="Sites"></sl-site-nav>
 ```
 
-- The list is `SITES`, built into the element and exported, so every site's nav lists the same
-  sites from one place: Org (`spike-html-hosting`), Architecture
+- The built list is `SITES`, built into the element and exported, so every site's nav lists the
+  same sites from one place: Org (`spike-html-hosting`), Architecture
   (`spike-html-hosting-architecture`), and sqlate (`spike-html-hosting-sqlate`). Each is a GitHub
   Pages project site of the same owner, on one origin, linked root-relative at `/<repository>/`,
   so the sites share the origin's storage, the reader's theme among it.
-- A change to the list is a release of the components, and each site takes it by moving its pin.
+- A change to the built list is a release of the components, and each site takes it by moving its
+  pin, so a site deployed with an older release lists that release's `SITES` until it is rebuilt.
+- `src`, optional, a URL, names one list every site reads instead, so a site added to it appears
+  on every site's nav at once, whatever release each was built with:
+
+  ```html
+  <sl-site-nav src="/spike-html-hosting/sites.json"></sl-site-nav>
+  ```
+
+  The list is JSON, a non-empty array of objects in the order the nav lists them, each with a
+  non-empty string `repository` and `label`, the shape of a `SITES` entry; an entry's other
+  properties are dropped:
+
+  ```json
+  [
+    { "repository": "spike-html-hosting", "label": "Org" },
+    { "repository": "spike-html-hosting-architecture", "label": "Architecture" },
+    { "repository": "spike-html-hosting-sqlate", "label": "sqlate" }
+  ]
+  ```
+
+  The element fetches it with the browser's `fetch()` and renders the built list until the fetch
+  succeeds, so the first paint never waits on the network, then renders the fetched list in its
+  place. A failed fetch, an error status, or a list that isn't JSON, is empty, or has an entry
+  without both strings keeps the built list. A changed `src` renders the built list again and
+  fetches its own list, a response for an older `src` dropped; a removed `src` renders the built
+  list again and fetches nothing. With no `src` the element fetches nothing and behaves as it did
+  in v0.2.2.
 - The current site's link carries `aria-current="page"`: the site whose repository is
   `location.pathname`'s first segment, so every page of a site marks it. A path whose first
   segment names no listed site marks none. The link is in the shadow root, so the element's own
@@ -301,7 +328,7 @@ mise run build                        # src/ into dist/
 mise run screenshots                  # capture each fixture page light and dark, wide and narrow, inline in the terminal
 mise run screenshots --palette primer # the same, in the palette named; --space and --type name the other facets
 mise run screenshots --all            # every palette at the defaults, then compact and sans at flexoki
-mise run screenshots --page site      # only the page named, section-tree or site; repeatable
+mise run screenshots --page site      # only the page named: section-tree, site, ahead, behind, ahead-fetched, or behind-fetched; repeatable
 mise run screenshots --scheme dark    # only the scheme named, light or dark
 mise run screenshots --output browser # a gallery of the captures, opened in the browser; directory keeps the files
 mise run screenshots --dir <path>     # write the captures into the directory named
@@ -311,10 +338,12 @@ mise run currency                     # report every tool, package, and action p
 
 `test/fixtures/section-tree.html` is the section tree's fixture page,
 `test/fixtures/section-tree-short.html` its page of sections shorter than a screen,
-`test/fixtures/drawer.html` the drawer cases' page, and `test/fixtures/sites/` holds two fixture sites served at their project
-sites' paths: the architecture stand-in's, with the site nav, the site index in its Pages drawer
-and opener, and the page header, and sqlate's, with the site nav. The browser tier runs on them
-in the pinned chrome-headless-shell, and `mise run screenshots` captures them through the
+`test/fixtures/drawer.html` the drawer cases' page, and `test/fixtures/sites/` holds the fixture
+sites served at their project sites' paths: the architecture stand-in's, with the site nav, the
+site index in its Pages drawer and opener, and the page header; sqlate's, with the site nav as
+built, a site deployed behind; a fourth site's, with a site nav whose `SITES` lists it too, a site
+deployed ahead; and the org's lists for `src`, `sites.json` naming all four. The browser tier
+runs on them in the pinned chrome-headless-shell, and `mise run screenshots` captures them through the
 `spike-html-apps-screenshots` bin of
 [spike-html-apps-tooling](https://github.com/JaimeStill/spike-html-apps-tooling).
 
