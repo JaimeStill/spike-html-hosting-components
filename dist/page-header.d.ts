@@ -1,16 +1,6 @@
-// The page header, Lit with a shadow root on the foundation's reset and elements sheets: a page's
-// front matter, slotted from the light DOM as a description list, its terms beside their values.
-
-import { html, LitElement } from "lit";
-
-import elements from "@jaimestill/spike-html-apps-foundation/baseline/elements.css" with { type: "css" };
-import reset from "@jaimestill/spike-html-apps-foundation/baseline/reset.css" with { type: "css" };
-import { define } from "@jaimestill/spike-html-apps-foundation/dom.js";
-import styles from "./page-header.css" with { type: "css" };
-
+import { LitElement } from "lit";
 /** The tag the element defines. */
-export const tagName = "sl-page-header";
-
+export declare const tagName = "sl-page-header";
 /**
  * A page's front matter. Its content is light-DOM HTML, the description list the element slots, so
  * with no script the list still renders as the page's own dl:
@@ -32,18 +22,12 @@ export const tagName = "sl-page-header";
  *
  * The header is no landmark and holds nothing to focus: it is the page's metadata, read in place.
  */
-export class PageHeader extends LitElement {
-  static styles = [reset, elements, styles];
-
-  render() {
-    return html`<slot></slot>`;
-  }
+export declare class PageHeader extends LitElement {
+    static styles: CSSStyleSheet[];
+    render(): import("lit").TemplateResult<1>;
 }
-
-define(tagName, PageHeader);
-
 declare global {
-  interface HTMLElementTagNameMap {
-    "sl-page-header": PageHeader;
-  }
+    interface HTMLElementTagNameMap {
+        "sl-page-header": PageHeader;
+    }
 }
