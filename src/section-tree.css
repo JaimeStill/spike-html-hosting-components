@@ -1,15 +1,16 @@
 /*
  * The section tree's layout in a shadow root: section-tree.ts adopts this sheet into its root after
- * the foundation's reset and elements sheets (baseline/reset.css and elements.css). It reads only
- * the foundation's baseline tokens, which a shadow root takes by inheritance from the page's entry,
- * and every length is a --space-* step. Unlayered, it sits above the adopted layers in the root.
+ * the foundation's reset and elements sheets (baseline/reset.css and elements.css) and the
+ * components' glyph-button.css. It reads only the foundation's baseline tokens, which a shadow root
+ * takes by inheritance from the page's entry, and every length is a --space-* step. Unlayered, it
+ * sits above the adopted layers in the root.
  *
  * Docked, the tree is a column: the reading progress, the slotted list, and the Previous and Next
- * buttons, each its glyph and its key hint. The slotted list is the page's light DOM, laid out by
- * the page's own sheets; the slot's top-level list starts at the column's edge. Navigation text
- * never breaks inside a word: the host sets overflow-wrap and word-break to normal, so a page's own
- * mid-word breaking, inherited from an ancestor, stops at the tree, and a link wraps only between
- * its words.
+ * buttons, glyph buttons laid out by glyph-button.css, each its glyph and its key hint. The
+ * slotted list is the page's light DOM, laid out by the page's own sheets; the slot's top-level
+ * list starts at the column's edge. Navigation text never breaks inside a word: the host sets
+ * overflow-wrap and word-break to normal, so a page's own mid-word breaking, inherited from an
+ * ancestor, stops at the tree, and a link wraps only between its words.
  *
  * As the bar, below `dock`, the host sticks to the top of the viewport on the page's background,
  * above the content that scrolls beneath it: the buttons in a row, the progress along the bar's
@@ -45,13 +46,6 @@ nav {
 .moves {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2xs);
-}
-/* Each button is its glyph, a block in the reset, and its key hint in a row, centered on the
-   text's line. */
-.moves button {
-  display: inline-flex;
-  align-items: center;
   gap: var(--space-2xs);
 }
 

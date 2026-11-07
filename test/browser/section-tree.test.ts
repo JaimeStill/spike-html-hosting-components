@@ -4,7 +4,10 @@
 // no link is marked at the page's top, and aria-current follows the scroll; L and H cycle through
 // the top and the sections, wrapping either way, which the keys help dialog lists, and do nothing
 // with the keys turned off; the Previous and Next buttons, so named, show the arrow-up-16 and
-// arrow-down-16 glyphs and their key hints alone, and move the same way; every arrow stays the
+// arrow-down-16 glyphs and their key hints alone, and move the same way; they are glyph buttons,
+// the class's row and padding on the native button's border and surface, each naming by
+// interestfor a hint popover of its name, which keyboard focus shows below it and Escape dismisses,
+// the name announced once with no description; every arrow stays the
 // browser's scrolling, in the page and in a region that scrolls sideways; a move is smooth unless
 // the reader asks for reduced motion; below dock, exactly, for the default and a px dock, and
 // never for a length the query can't read, the tree is a bar stuck to the viewport's top, its
@@ -12,7 +15,7 @@
 // and put back as it leaves; no link text breaks inside a word, whatever the page inherits; the
 // progress bar runs on the root's scroll timeline, guarded by @supports; and the tree renders in
 // every profile the foundation's full entry registers, light and dark, at 1280 and 390 px, with no
-// sideways scroll, its glyphs drawn, and its focus drawn. On test/fixtures/section-tree-short.html,
+// sideways scroll, its glyphs drawn, its glyph buttons at least 24 px a side, and its focus drawn. On test/fixtures/section-tree-short.html,
 // whose sections are shorter than the reading line's distance from the top, L and H visit every
 // stop in order, each move counting from the stop the last one reached, at 1280 and 390 px, instant
 // and smooth, and with a smooth move's scroll cut short by the next, and with no scrollend, as an
@@ -33,6 +36,14 @@ import type { Server } from "@jaimestill/spike-html-apps-tooling/server.js";
 import down from "@jaimestill/spike-html-hosting-icons/octicon/arrow-down-16";
 import up from "@jaimestill/spike-html-hosting-icons/octicon/arrow-up-16";
 
+import {
+  assertGlyphButton,
+  assertTarget,
+  descriptions,
+  glyphButton,
+  hintShown,
+  untilHint,
+} from "./support/glyph-button.ts";
 import { assertGlyph, exposed, glyph } from "./support/glyphs.ts";
 import { registry as read, resize, runs, type Registry } from "./support/profiles.ts";
 import { served } from "./support/served.ts";
@@ -65,6 +76,7 @@ const KEYS = {
   ArrowRight: { key: "ArrowRight", code: "ArrowRight", windowsVirtualKeyCode: 39 },
   ArrowDown: { key: "ArrowDown", code: "ArrowDown", windowsVirtualKeyCode: 40 },
   Tab: { key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 },
+  Escape: { key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 },
   Enter: { key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, text: "\r" },
   "?": { key: "?", code: "Slash", windowsVirtualKeyCode: 191, modifiers: 8, text: "?" },
 };
@@ -390,6 +402,27 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       await page.evaluate(`${SHADOW}.querySelector(".previous").click()`);
       await still(page);
       assert.deepEqual(await current(page), { index: count - 1, marked: 1 }, "round to the last");
+    });
+
+    test("the buttons are glyph buttons, each naming its hint by interestfor, announced once", async () => {
+      for (const button of ["previous", "next"]) {
+        const shown = await glyphButton(page, `${SHADOW}.querySelector(".${button}")`);
+        assertGlyphButton(shown, button);
+        assertTarget(shown, button);
+        // Chromium would make the hint's text the description; the name is announced once.
+        assert.deepEqual(await descriptions(page, shown.label), [""], `${button}: no description`);
+      }
+    });
+
+    test("keyboard focus on a button shows its hint below it, and Escape dismisses it", async () => {
+      const next = `${SHADOW}.querySelector(".next")`;
+      // Focus as the keyboard gives it, :focus-visible, which interest follows.
+      await page.evaluate(`${next}.focus({ focusVisible: true })`);
+      await untilHint(page, next, true);
+      const shown = await hintShown(page, next);
+      assert.deepEqual(shown, { open: true, below: true, above: false, overlaps: true });
+      await press(page, "Escape");
+      await untilHint(page, next, false);
     });
 
     test("the keys help dialog lists both moves, and its row runs one", async () => {
@@ -1033,7 +1066,7 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
       assert.ok(registry.type.length >= 2, JSON.stringify(registry));
     });
 
-    test("renders with no sideways scroll, its glyphs drawn, and its focus drawn, light and dark, wide and narrow", async () => {
+    test("renders with no sideways scroll, its glyphs drawn, its glyph buttons at least 24 px a side, and its focus drawn, light and dark, wide and narrow", async () => {
       for (const run of runs(registry)) {
         const name = JSON.stringify(run);
         const { width, ...profile } = run;
@@ -1065,6 +1098,9 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
         ]) {
           const drawn = await glyph(page, `${SHADOW}.querySelector(".${button}")`, markup);
           assertGlyph(drawn, `${name}: ${button}`);
+          const shown = await glyphButton(page, `${SHADOW}.querySelector(".${button}")`);
+          assertGlyphButton(shown, `${name}: ${button}`);
+          assertTarget(shown, `${name}: ${button}`);
         }
 
         // The keyboard reaches the help button, then, in the column, the first link and past the

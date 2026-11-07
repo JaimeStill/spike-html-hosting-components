@@ -13,6 +13,7 @@ import { define } from "@jaimestill/spike-html-apps-foundation/dom.js";
 import { register, settings } from "@jaimestill/spike-html-apps-foundation/keys.js";
 import down from "@jaimestill/spike-html-hosting-icons/octicon/arrow-down-16";
 import up from "@jaimestill/spike-html-hosting-icons/octicon/arrow-up-16";
+import glyphButton from "./glyph-button.css" with { type: "css" };
 import styles from "./section-tree.css" with { type: "css" };
 
 /** The tag the element defines. */
@@ -138,11 +139,13 @@ const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
  * cancels each key a binding matches, so the element binds none. The Previous and Next buttons
  * show Octicons' arrow-up-16 and arrow-down-16, from the icons layer, with the key hints H and L,
  * each in a kbd, and are named "Previous" and "Next" by their aria-label, while the help dialog
- * lists the bindings as "Previous section" and "Next section". They move the same way whatever
- * the setting, are disabled only when the tree names no section, and carry aria-keyshortcuts while
- * the setting has the keys fire. A move scrolls smoothly unless the reader asks for reduced
- * motion; its scroll ends at its scrollend or, in an engine that fires none, once the page has
- * stood still for a few frames.
+ * lists the bindings as "Previous section" and "Next section". They are glyph buttons, laid out by
+ * glyph-button.css, and each shows its name on hover and keyboard focus in a hint popover, by
+ * interestfor, where the browser supports it, announced once as the name. They move the same way
+ * whatever the setting, are disabled only when the tree names no section, and carry
+ * aria-keyshortcuts while the setting has the keys fire. A move scrolls smoothly unless the reader
+ * asks for reduced motion; its scroll ends at its scrollend or, in an engine that fires none, once
+ * the page has stood still for a few frames.
  *
  * At `dock`, a CSS length (DOCK, 70rem, by default), and wider, the tree is a column: the
  * progress, the links, and the buttons. Below it the tree is a bar stuck to the top of the
@@ -161,7 +164,7 @@ const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
  * script: in an engine without scroll timelines it is absent and nothing else changes.
  */
 export class SectionTree extends LitElement {
-  static styles = [reset, elements, styles];
+  static styles = [reset, elements, glyphButton, styles];
 
   static properties = {
     label: { type: String },
@@ -269,10 +272,15 @@ export class SectionTree extends LitElement {
 
   render() {
     const hint = (key: string) => html`<span aria-hidden="true"><kbd>${key}</kbd></span>`;
-    // Each button shows its glyph and its key hint, both hidden from the accessibility tree, and
-    // is named by its aria-label. The glyph is the icons layer's svg string, a constant, which
-    // unsafeHTML parses once into the button and leaves as it is on every later render.
-    // aria-keyshortcuts declares a key only while the reader's setting has it fire.
+    // Each button is a glyph button showing its glyph and its key hint, both hidden from the
+    // accessibility tree, and is named by its aria-label. The glyph is the icons layer's svg
+    // string, a constant, which unsafeHTML parses once into the button and leaves as it is on
+    // every later render. aria-keyshortcuts declares a key only while the reader's setting has it
+    // fire. interestfor shows each button's name, in a hint popover beside it in this shadow root,
+    // on hover and keyboard focus. Chromium makes an interest target's text its invoker's
+    // description, aria-hidden or not, so the name would be read twice; the empty aria-description
+    // comes first among the description's sources and leaves none, and aria-hidden keeps the hint
+    // out of the accessibility tree while it shows.
     const shortcut = (keys: string) => (this._keys ? keys : nothing);
     return html`
       <nav aria-label=${this.label}>
@@ -281,24 +289,32 @@ export class SectionTree extends LitElement {
         <div class="moves">
           <button
             type="button"
-            class="previous"
+            class="glyph-button previous"
             aria-label=${PREVIOUS_NAME}
             aria-keyshortcuts=${shortcut(PREVIOUS_SHORTCUT)}
+            interestfor="previous-hint"
+            aria-description=""
             ?disabled=${this._count === 0}
             @click=${() => this.#move(-1)}
           >
             ${unsafeHTML(up)} ${hint(PREVIOUS_SHORTCUT)}
           </button>
+          <div id="previous-hint" class="glyph-hint" popover="hint" aria-hidden="true">
+            ${PREVIOUS_NAME}
+          </div>
           <button
             type="button"
-            class="next"
+            class="glyph-button next"
             aria-label=${NEXT_NAME}
             aria-keyshortcuts=${shortcut(NEXT_SHORTCUT)}
+            interestfor="next-hint"
+            aria-description=""
             ?disabled=${this._count === 0}
             @click=${() => this.#move(1)}
           >
             ${unsafeHTML(down)} ${hint(NEXT_SHORTCUT)}
           </button>
+          <div id="next-hint" class="glyph-hint" popover="hint" aria-hidden="true">${NEXT_NAME}</div>
         </div>
       </nav>
     `;

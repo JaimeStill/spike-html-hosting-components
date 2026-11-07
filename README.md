@@ -1,10 +1,10 @@
 # spike-html-hosting-components
 
 The documentation components layer of spike-html-hosting: five Lit elements with shadow roots,
-and their sheets, that the spike's GitHub Pages sites build their pages from, the section tree,
-the page header, the site index, the nav between the sites, and the drawer that holds the site
-index where its column doesn't fit. It is ES modules with their type declarations and
-stylesheets, built on
+their sheets, and the glyph button's sheet, that the spike's GitHub Pages sites build their pages
+from, the section tree, the page header, the site index, the nav between the sites, and the drawer
+that holds the site index where its column doesn't fit. It is ES modules with their type
+declarations and stylesheets, built on
 [spike-html-apps-foundation](https://github.com/JaimeStill/spike-html-apps-foundation) and drawing
 its glyphs from [spike-html-hosting-icons](https://github.com/JaimeStill/spike-html-hosting-icons),
 both of which it takes as peers, and is released by git tag.
@@ -48,12 +48,49 @@ import "@jaimestill/spike-html-hosting-components/drawer.js";
 
 - `./<name>.js`, with its `./<name>.d.ts`: each element's module, which exports its `tagName`.
 - `./<name>.css`: each element's sheet, which its module imports itself.
+- `./glyph-button.css`: the glyph button's sheet, which the section tree and the drawer adopt in
+  their shadow roots and a page links for its own; see [Glyph buttons](#glyph-buttons).
 
 Every element but the site nav slots light-DOM markup the page writes, so with no script that
 markup renders as the page's own and every link still goes where it says. Where an element marks
 a slotted link with `aria-current`, the mark is an attribute on the light-DOM link, which a shadow
 sheet can't reach below the slot's top level, so its look is the page's to style, for example
 `sl-section-tree a[aria-current]` and `sl-site-index a[aria-current]`.
+
+### Glyph buttons
+
+A glyph button is a control of its own beside the text button: the class `glyph-button` on a
+native `<button>` that shows a glyph and, when it has one, its key hint in a `<kbd>`, named by its
+`aria-label`. `glyph-button.css` lays the glyph and the hint in a row, centered, with padding
+`--space-3xs` block and `--space-2xs` inline and `--space-3xs` between them, and keeps the native
+button's border, surface, hover, and focus ring from the foundation's elements layer. Its lengths
+are the foundation's space steps alone, and every glyph button is at least 24 CSS px a side, the
+glyph alone in the compact space profile at its narrowest included. The sheet is unlayered, so it
+sits above the foundation's layers in a shadow root and in a page.
+
+Each glyph button shows its name on hover and keyboard focus through an interest invoker:
+`interestfor` names an element of `popover="hint"` in the same tree, of the class `glyph-hint`,
+whose text is the button's name. The browser shows it below the button, above where the viewport
+would cut it, and Escape dismisses it, with no script. Where `interestfor` isn't supported, today
+everywhere but Chromium, the hint never shows and the button keeps its name. Chromium makes an
+interest target's text its invoker's description, so the button carries an empty
+`aria-description` and the hint `aria-hidden="true"`: assistive technology announces the name
+once.
+
+```html
+<button
+  type="button"
+  class="glyph-button"
+  aria-label="Previous"
+  aria-keyshortcuts="H"
+  interestfor="previous-hint"
+  aria-description=""
+>
+  <svg …></svg>
+  <span aria-hidden="true"><kbd>H</kbd></span>
+</button>
+<div id="previous-hint" class="glyph-hint" popover="hint" aria-hidden="true">Previous</div>
+```
 
 ### `sl-section-tree`
 
@@ -99,11 +136,12 @@ GitHub's heading id, with a nested `ul` or `ol` for the `h3`s under it:
   covers character keys, turns them off. Every arrow key stays the browser's own scrolling, in the
   page and in any region that scrolls sideways. The Previous and Next buttons show Octicons'
   `arrow-up-16` and `arrow-down-16` with the key hints H and L, each in a `<kbd>`, and are named
-  "Previous" and "Next" by their `aria-label`. They move the same way whatever the setting, are
-  disabled only when the tree names no section, and carry `aria-keyshortcuts` while the keys are
-  on. A move scrolls smoothly unless the reader asks for reduced motion; its scroll ends at its
-  `scrollend`, or, in an engine that fires none, as Safari may, once the page has stood still for
-  five frames, or after three seconds at most, whichever comes first.
+  "Previous" and "Next" by their `aria-label`. They are [glyph buttons](#glyph-buttons), each
+  showing its name in its hint on hover and keyboard focus. They move the same way whatever the
+  setting, are disabled only when the tree names no section, and carry `aria-keyshortcuts` while
+  the keys are on. A move scrolls smoothly unless the reader asks for reduced motion; its scroll
+  ends at its `scrollend`, or, in an engine that fires none, as Safari may, once the page has
+  stood still for five frames, or after three seconds at most, whichever comes first.
 - `dock`, a CSS length, `70rem` by default (exported as `DOCK`), is the width at which the tree is
   a column, and wider: where one 16rem side column fits beside a reading column of 80ch in the
   foundation's default mono type. A site whose layout docks the column elsewhere sets its own,
@@ -258,7 +296,9 @@ a switch between the modes swaps only the shadow root's wrapper around the same 
   dialog covering the viewport, sliding in from the inline-start edge unless the reader asks for
   reduced motion, the page behind inert and focus inside. Its header holds `label` as a visible
   `h2` and a Close button that shows Octicons' `x-16` alone, named "Close" and the label by its
-  visually hidden text; the `close` slot replaces "Close" there, for a translation. The Close
+  visually hidden text; the `close` slot replaces "Close" there, for a translation. It is a
+  [glyph button](#glyph-buttons), showing that name, the slot's text and the label, in its hint on
+  hover and keyboard focus. The Close
   button, Escape, `close()`, `toggle()`, or `open` set false closes it, and focus returns to the
   element that held it.
 - `open` and `close` go out, bubbling and composed, each time the modal drawer opens or closes,
