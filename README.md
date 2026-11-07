@@ -4,7 +4,7 @@ The documentation components layer of spike-html-hosting: seven Lit elements wit
 their sheets, and the glyph button's sheet, that the spike's GitHub Pages sites build their pages
 from, the section tree, the page header, the site index, the nav between the sites, the drawer
 that holds the site index where its column doesn't fit, the list of the page's keyboard
-shortcuts in its help dialog, and the reader's settings in its Settings dialog. It is ES modules
+shortcuts in its Help dialog, and the reader's settings in its Settings dialog. It is ES modules
 with their type declarations and stylesheets, built on
 [spike-html-apps-foundation](https://github.com/JaimeStill/spike-html-apps-foundation) and drawing
 its glyphs from [spike-html-hosting-icons](https://github.com/JaimeStill/spike-html-hosting-icons),
@@ -96,6 +96,125 @@ once.
 <div id="previous-hint" class="glyph-hint" popover="hint" aria-hidden="true">Previous</div>
 ```
 
+### Shortcut dialogs
+
+A shortcut dialog is a pattern, not an element: markup the page writes from native parts, which
+no module of this package defines. A key and its opener, a [glyph button](#glyph-buttons), open a
+native modal dialog that holds a heading naming it, whatever content its focused operation needs,
+and a Close glyph button with the hint Esc. It gives any focused interface overlaid on the page a
+key: the reader's settings and the page's shortcuts are its two instances here.
+
+The opener is a native `<button class="glyph-button">`:
+
+- `data-keys="<key>"` binds it to its key: the foundation's keys module clicks it on that key and
+  writes its `aria-keyshortcuts` while the reader's setting has the key fire.
+- `commandfor="<dialog id>"` and `command="show-modal"` open the dialog as a modal, by the native
+  invoker command, with no script.
+- It shows its glyph, a marker `<svg data-icon="octicon/<name>">` that
+  [spike-html-hosting-sdk](https://github.com/JaimeStill/spike-html-hosting-sdk) fills with the
+  icons module's `svg` at build, and its key hint, a `<kbd>` in an `aria-hidden` span.
+- `aria-label` names it, and the shortcuts list names its row by that name.
+- Its `interestfor` names its hint, a `popover="hint"` element of the class `glyph-hint` and
+  `aria-hidden="true"` whose text is the name, and it carries an empty `aria-description`, as
+  every glyph button does.
+
+The dialog is a native `<dialog>`:
+
+- `aria-labelledby` names it by its heading, an `h2` of the operation's name: a dialog takes no
+  name from a heading inside it on its own.
+- Its content is whatever the operation needs, and the operation applies as its content says:
+  there is no Save and no Cancel, and closing is the dialog's own concern, never the content's.
+- Its Close is a glyph button, `commandfor="<dialog id>"` and `command="close"`, named "Close" by
+  its `aria-label`, showing Octicons' `x-16` and the hint `<kbd>Esc</kbd>`, with its own interest
+  hint. Escape closes a modal dialog natively, from anywhere in it, a field included. The Close
+  takes no `data-keys`, and the opener's key doesn't close it: the keys module passes over a key
+  pressed in a field, and a shortcut dialog's content is often one, so the key would close it
+  only some of the time.
+
+While the dialog is open the page behind it is inert and the keys module fires only the
+dialog's own keys, so the opener's key, outside it, fires nothing. When it closes, the browser
+returns focus to the element that held it as the dialog opened: the opener, when it was clicked
+or activated from the keyboard, or, since the keys module clicks the opener without focusing it,
+the element focus was on when the dialog's key opened it.
+
+The Settings dialog is one instance, under S, with Octicons' `gear-16`; its heading is
+"Settings" and it holds [`sl-settings`](#sl-settings), which applies and stores every change at
+once:
+
+```html
+<button
+  type="button"
+  class="glyph-button"
+  commandfor="settings"
+  command="show-modal"
+  aria-label="Settings"
+  data-keys="s"
+  interestfor="settings-hint"
+  aria-description=""
+>
+  <svg data-icon="octicon/gear-16"></svg>
+  <span aria-hidden="true"><kbd>S</kbd></span>
+</button>
+<div id="settings-hint" class="glyph-hint" popover="hint" aria-hidden="true">Settings</div>
+<dialog id="settings" aria-labelledby="settings-title">
+  <h2 id="settings-title">Settings</h2>
+  <sl-settings></sl-settings>
+  <footer>
+    <button
+      type="button"
+      class="glyph-button"
+      commandfor="settings"
+      command="close"
+      aria-label="Close"
+      interestfor="settings-close-hint"
+      aria-description=""
+    >
+      <svg data-icon="octicon/x-16"></svg>
+      <span aria-hidden="true"><kbd>Esc</kbd></span>
+    </button>
+    <div id="settings-close-hint" class="glyph-hint" popover="hint" aria-hidden="true">Close</div>
+  </footer>
+</dialog>
+```
+
+The Help dialog is the other, under ?, with Octicons' `question-16`; its heading is "Keyboard
+shortcuts" and it holds [`sl-shortcuts`](#sl-shortcuts) alone, which lists every binding outside
+the dialog, Help's and Settings' among them. The site header under [`sl-drawer`](#sl-drawer)
+gives both.
+
+Any other focused operation extends the pattern the same way, its content whatever the
+operation needs. An upload, for one, is an opener under U, with Octicons' `upload-16` and the
+name "Upload", and a dialog headed "Upload" that holds a file input, a drop area, and a list of
+the uploads' progress, which the page's script runs:
+
+```html
+<dialog id="upload" aria-labelledby="upload-title">
+  <h2 id="upload-title">Upload</h2>
+  <label>Files <input type="file" multiple /></label>
+  <div class="drop">Or drop files here</div>
+  <ul class="uploads"></ul>
+  <footer>
+    <button
+      type="button"
+      class="glyph-button"
+      commandfor="upload"
+      command="close"
+      aria-label="Close"
+      interestfor="upload-close-hint"
+      aria-description=""
+    >
+      <svg data-icon="octicon/x-16"></svg>
+      <span aria-hidden="true"><kbd>Esc</kbd></span>
+    </button>
+    <div id="upload-close-hint" class="glyph-hint" popover="hint" aria-hidden="true">Close</div>
+  </footer>
+</dialog>
+```
+
+spike-html-hosting-sdk's shell checks hold every page a site builds to the pattern: a page fails
+where a dialog that a keyed `show-modal` opener opens has no heading naming it or no Close with
+the hint Esc, or where the opener doesn't show its key and its name.
+
 ### `sl-section-tree`
 
 `./section-tree.js`: a page's table of contents. `label`, the name of the nav landmark its shadow
@@ -135,17 +254,18 @@ GitHub's heading id, with a nested `ul` or `ol` for the `h3`s under it:
   make that section the held stop, while the link's navigation and scroll, with `:target` and its
   scroll margin, stay the browser's. A page loaded with a fragment holds no stop. Once the reader
   scrolls by other means, the mark follows the reading line again and the next move counts from
-  the section in view. H and L are bound by `register()` in the foundation's keys module, so its
-  help dialog lists them as "Previous section" and "Next section" and its off switch, which
-  covers character keys, turns them off. Every arrow key stays the browser's own scrolling, in the
-  page and in any region that scrolls sideways. The Previous and Next buttons show Octicons'
-  `arrow-up-16` and `arrow-down-16` with the key hints H and L, each in a `<kbd>`, and are named
-  "Previous" and "Next" by their `aria-label`. They are [glyph buttons](#glyph-buttons), each
-  showing its name in its hint on hover and keyboard focus. They move the same way whatever the
-  setting, are disabled only when the tree names no section, and carry `aria-keyshortcuts` while
-  the keys are on. A move scrolls smoothly unless the reader asks for reduced motion; its scroll
-  ends at its `scrollend`, or, in an engine that fires none, as Safari may, once the page has
-  stood still for five frames, or after three seconds at most, whichever comes first.
+  the section in view. H and L are bound by `register()` in the foundation's keys module, so
+  [`sl-shortcuts`](#sl-shortcuts) lists them as "Previous section" and "Next section", and the
+  character-key switch of [`sl-settings`](#sl-settings) turns them off. Every arrow key stays the
+  browser's own scrolling, in the page and in any region that scrolls sideways. The Previous and
+  Next buttons show Octicons' `arrow-up-16` and `arrow-down-16` with the key hints H and L, each in
+  a `<kbd>`, and are named "Previous" and "Next" by their `aria-label`. They are
+  [glyph buttons](#glyph-buttons), each showing its name in its hint on hover and keyboard focus.
+  They move the same way whatever the setting, are disabled only when the tree names no section,
+  and carry `aria-keyshortcuts` while the keys are on. A move scrolls smoothly unless the reader
+  asks for reduced motion; its scroll ends at its `scrollend`, or, in an engine that fires none, as
+  Safari may, once the page has stood still for five frames, or after three seconds at most,
+  whichever comes first.
 - `dock`, a CSS length, `70rem` by default (exported as `DOCK`), is the width at which the tree is
   a column, and wider: where one 16rem side column fits beside a reading column of 80ch in the
   foundation's default mono type. A site whose layout docks the column elsewhere sets its own,
@@ -312,39 +432,69 @@ a switch between the modes swaps only the shadow root's wrapper around the same 
 A site shell holds its site index in a drawer labeled "Pages", and its header holds the opener,
 page markup and the page's script rather than the drawer's: a button named "Pages" by its
 `aria-label`, showing its glyph and the key hint P in a `<kbd>`, bound to P by the foundation's
-keys module through `data-keys="p"`, as the Help button is bound to ? and the Theme button to T,
-shown only below the drawer's `dock` and only once the drawer is defined, which calls the drawer's
-`show()` and says through `aria-expanded` whether it is open. Each header button, and the keys
-help dialog's Close, shows a glyph and its key hint, its word no longer shown and its name in its
-`aria-label`. The page's markup names each glyph by a marker, an empty
-`<svg data-icon="<set>/<name>">`, which
+keys module through `data-keys="p"`, shown only below the drawer's `dock` and only once the
+drawer is defined, which calls the drawer's `show()` and says through `aria-expanded` whether it
+is open. The header is the site nav and one group of buttons at its inline end, a
+`<div class="header-actions">`, which holds Pages, Help under ?, and Settings under S, in that
+order. Each is a [glyph button](#glyph-buttons), showing its glyph and its key hint, named by its
+`aria-label`, and showing that name in its interest hint. Help and Settings open their
+[shortcut dialogs](#shortcut-dialogs), each closed by its Close or Escape. The page's markup names
+each glyph by a marker, an empty `<svg data-icon="<set>/<name>">`, which
 [spike-html-hosting-sdk](https://github.com/JaimeStill/spike-html-hosting-sdk) fills with the
 icons module's `svg` at build: Octicons' `list-unordered-16` for Pages, `question-16` for Help,
-`paintbrush-16` for Theme, and `x-16` for the help dialog's Close:
+`gear-16` for Settings, and `x-16` for each dialog's Close. The SDK's `site.css` lays out the
+header and its `header-actions` group. A page links the foundation's full page entry,
+`page-full.css`, then this package's `glyph-button.css`, then the SDK's `site.css`, and imports
+`shortcuts.js` and `settings.js` beside the elements it shows:
 
 ```html
 <header>
   <sl-site-nav></sl-site-nav>
-  <button
-    type="button"
-    class="pages-opener"
-    aria-controls="pages"
-    aria-haspopup="dialog"
-    aria-expanded="false"
-    aria-label="Pages"
-    data-keys="p"
-  >
-    <svg data-icon="octicon/list-unordered-16"></svg>
-    <span aria-hidden="true"><kbd>P</kbd></span>
-  </button>
-  <button type="button" commandfor="help" command="show-modal" aria-label="Help" data-keys="?">
-    <svg data-icon="octicon/question-16"></svg>
-    <span aria-hidden="true"><kbd>?</kbd></span>
-  </button>
-  <button type="button" commandfor="theme" command="--open" aria-label="Theme" data-keys="t">
-    <svg data-icon="octicon/paintbrush-16"></svg>
-    <span aria-hidden="true"><kbd>T</kbd></span>
-  </button>
+  <div class="header-actions">
+    <button
+      type="button"
+      class="glyph-button pages-opener"
+      aria-controls="pages"
+      aria-haspopup="dialog"
+      aria-expanded="false"
+      aria-label="Pages"
+      data-keys="p"
+      interestfor="pages-hint"
+      aria-description=""
+    >
+      <svg data-icon="octicon/list-unordered-16"></svg>
+      <span aria-hidden="true"><kbd>P</kbd></span>
+    </button>
+    <div id="pages-hint" class="glyph-hint" popover="hint" aria-hidden="true">Pages</div>
+    <button
+      type="button"
+      class="glyph-button"
+      commandfor="help"
+      command="show-modal"
+      aria-label="Help"
+      data-keys="?"
+      interestfor="help-hint"
+      aria-description=""
+    >
+      <svg data-icon="octicon/question-16"></svg>
+      <span aria-hidden="true"><kbd>?</kbd></span>
+    </button>
+    <div id="help-hint" class="glyph-hint" popover="hint" aria-hidden="true">Help</div>
+    <button
+      type="button"
+      class="glyph-button"
+      commandfor="settings"
+      command="show-modal"
+      aria-label="Settings"
+      data-keys="s"
+      interestfor="settings-hint"
+      aria-description=""
+    >
+      <svg data-icon="octicon/gear-16"></svg>
+      <span aria-hidden="true"><kbd>S</kbd></span>
+    </button>
+    <div id="settings-hint" class="glyph-hint" popover="hint" aria-hidden="true">Settings</div>
+  </div>
 </header>
 <sl-drawer label="Pages" id="pages">
   <sl-site-index label="Site">
@@ -355,12 +505,40 @@ icons module's `svg` at build: Octicons' `list-unordered-16` for Pages, `questio
 </sl-drawer>
 <dialog id="help" aria-labelledby="help-title">
   <h2 id="help-title">Keyboard shortcuts</h2>
-  <div data-keys-list></div>
+  <sl-shortcuts></sl-shortcuts>
   <footer>
-    <button type="button" commandfor="help" command="close" aria-label="Close" data-keys="?">
+    <button
+      type="button"
+      class="glyph-button"
+      commandfor="help"
+      command="close"
+      aria-label="Close"
+      interestfor="help-close-hint"
+      aria-description=""
+    >
       <svg data-icon="octicon/x-16"></svg>
-      <span aria-hidden="true"><kbd>?</kbd></span>
+      <span aria-hidden="true"><kbd>Esc</kbd></span>
     </button>
+    <div id="help-close-hint" class="glyph-hint" popover="hint" aria-hidden="true">Close</div>
+  </footer>
+</dialog>
+<dialog id="settings" aria-labelledby="settings-title">
+  <h2 id="settings-title">Settings</h2>
+  <sl-settings></sl-settings>
+  <footer>
+    <button
+      type="button"
+      class="glyph-button"
+      commandfor="settings"
+      command="close"
+      aria-label="Close"
+      interestfor="settings-close-hint"
+      aria-description=""
+    >
+      <svg data-icon="octicon/x-16"></svg>
+      <span aria-hidden="true"><kbd>Esc</kbd></span>
+    </button>
+    <div id="settings-close-hint" class="glyph-hint" popover="hint" aria-hidden="true">Close</div>
   </footer>
 </dialog>
 ```
@@ -371,7 +549,7 @@ icons module's `svg` at build: Octicons' `list-unordered-16` for Pages, `questio
 }
 @media (width < 48rem) {
   body:has(sl-drawer:defined) .pages-opener {
-    display: inline-block;
+    display: inline-flex;
   }
 }
 ```
@@ -394,10 +572,10 @@ hidden.
 
 ### `sl-shortcuts`
 
-`./shortcuts.js`: the page's keyboard shortcuts, for its help dialog. It takes no attribute and
-slots nothing. Placed in a `dialog`, it lists exactly the bindings that the foundation's keys
-module's `bindings(dialog)` gives with that dialog closed, the ones the page has outside it, in
-that order:
+`./shortcuts.js`: the page's keyboard shortcuts, for its Help dialog, a
+[shortcut dialog](#shortcut-dialogs). It takes no attribute and slots nothing. Placed in a
+`dialog`, it lists exactly the bindings that the foundation's keys module's `bindings(dialog)`
+gives with that dialog closed, the ones the page has outside it, in that order:
 
 ```html
 <dialog id="help" aria-labelledby="help-title">
@@ -427,7 +605,8 @@ that order:
 ### `sl-settings`
 
 `./settings.js`: the reader's settings, the theme and the keyboard, for a Settings dialog. It
-takes no attribute and slots nothing. The dialog, its heading, and its Close are the page's:
+takes no attribute and slots nothing. The dialog, its heading, and its Close are the page's, a
+[shortcut dialog](#shortcut-dialogs):
 
 ```html
 <dialog id="settings" aria-labelledby="settings-title">
