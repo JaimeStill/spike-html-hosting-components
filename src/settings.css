@@ -1,0 +1,18 @@
+/*
+ * The settings' layout in a shadow root: settings.ts adopts this sheet into its root after the
+ * foundation's reset, elements, meta, structure, and utilities sheets, which draw the preview
+ * card's buttons, field, and striped table, and its theme-menu.css, in foundation.theme-menu,
+ * which lays out the rows and the preview as the foundation's theme menu does. It reads only the
+ * foundation's baseline tokens, which a shadow root takes by inheritance from the page's entry,
+ * and every length is a --space-* step. Unlayered, it sits above the adopted layers in the root.
+ *
+ * The theme and the keyboard settings are two sections, each under its heading, the keyboard's
+ * --space-m below the theme's, the space the elements layer puts before a dialog's actions.
+ */
+
+:host {
+  display: block;
+}
+section + section {
+  margin-block-start: var(--space-m);
+}

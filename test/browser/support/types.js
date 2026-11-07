@@ -2,11 +2,12 @@
 // narrows what a consumer may write fails `types:browser`. No page runs this module; tsc checks
 // it against dist/.
 // Adapted from spike-html-apps-components (51d2b92): test/browser/support/types.js, its guards
-// the section tree's, the site components', the drawer's, and the shortcuts list's.
+// the section tree's, the site components', the drawer's, the shortcuts list's, and the settings'.
 
 /** @import { Drawer } from "../../../dist/drawer.js" */
 /** @import { SectionTree } from "../../../dist/section-tree.js" */
 /** @import { Shortcuts } from "../../../dist/shortcuts.js" */
+/** @import { Settings } from "../../../dist/settings.js" */
 /** @import { PageHeader } from "../../../dist/page-header.js" */
 /** @import { SiteIndex } from "../../../dist/site-index.js" */
 /** @import { Site, SiteNav } from "../../../dist/site-nav.js" */
@@ -44,6 +45,10 @@ export const site = { repository: "spike-html-hosting-example", label: "Example"
  * @type {Shortcuts | null} */
 export const shortcuts = null;
 
+/** The settings, an element with no public property of its own to narrow.
+ * @type {Settings | null} */
+export const settings = null;
+
 /** The tags the modules define, as the tag name map types them: a missing entry fails here.
  * @type {[
  *   HTMLElementTagNameMap["sl-section-tree"] | null,
@@ -52,5 +57,6 @@ export const shortcuts = null;
  *   HTMLElementTagNameMap["sl-site-nav"] | null,
  *   HTMLElementTagNameMap["sl-drawer"] | null,
  *   HTMLElementTagNameMap["sl-shortcuts"] | null,
+ *   HTMLElementTagNameMap["sl-settings"] | null,
  * ]} */
-export const tags = [null, null, null, null, null, null];
+export const tags = [null, null, null, null, null, null, null];
