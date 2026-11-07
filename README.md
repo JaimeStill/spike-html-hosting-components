@@ -1,9 +1,10 @@
 # spike-html-hosting-components
 
-The documentation components layer of spike-html-hosting: five Lit elements with shadow roots,
+The documentation components layer of spike-html-hosting: six Lit elements with shadow roots,
 their sheets, and the glyph button's sheet, that the spike's GitHub Pages sites build their pages
-from, the section tree, the page header, the site index, the nav between the sites, and the drawer
-that holds the site index where its column doesn't fit. It is ES modules with their type
+from, the section tree, the page header, the site index, the nav between the sites, the drawer
+that holds the site index where its column doesn't fit, and the list of the page's keyboard
+shortcuts in its help dialog. It is ES modules with their type
 declarations and stylesheets, built on
 [spike-html-apps-foundation](https://github.com/JaimeStill/spike-html-apps-foundation) and drawing
 its glyphs from [spike-html-hosting-icons](https://github.com/JaimeStill/spike-html-hosting-icons),
@@ -44,6 +45,7 @@ import "@jaimestill/spike-html-hosting-components/site-index.js";
 import "@jaimestill/spike-html-hosting-components/page-header.js";
 import "@jaimestill/spike-html-hosting-components/section-tree.js";
 import "@jaimestill/spike-html-hosting-components/drawer.js";
+import "@jaimestill/spike-html-hosting-components/shortcuts.js";
 ```
 
 - `./<name>.js`, with its `./<name>.d.ts`: each element's module, which exports its `tagName`.
@@ -51,11 +53,11 @@ import "@jaimestill/spike-html-hosting-components/drawer.js";
 - `./glyph-button.css`: the glyph button's sheet, which the section tree and the drawer adopt in
   their shadow roots and a page links for its own; see [Glyph buttons](#glyph-buttons).
 
-Every element but the site nav slots light-DOM markup the page writes, so with no script that
-markup renders as the page's own and every link still goes where it says. Where an element marks
-a slotted link with `aria-current`, the mark is an attribute on the light-DOM link, which a shadow
-sheet can't reach below the slot's top level, so its look is the page's to style, for example
-`sl-section-tree a[aria-current]` and `sl-site-index a[aria-current]`.
+Every element but the site nav and the shortcuts list slots light-DOM markup the page writes, so
+with no script that markup renders as the page's own and every link still goes where it says.
+Where an element marks a slotted link with `aria-current`, the mark is an attribute on the
+light-DOM link, which a shadow sheet can't reach below the slot's top level, so its look is the
+page's to style, for example `sl-section-tree a[aria-current]` and `sl-site-index a[aria-current]`.
 
 ### Glyph buttons
 
@@ -388,6 +390,38 @@ another width sets the drawer's `dock` and its opener's media query to the same 
 script the drawer is undefined, so the index renders as the page's own and the opener stays
 hidden.
 
+### `sl-shortcuts`
+
+`./shortcuts.js`: the page's keyboard shortcuts, for its help dialog. It takes no attribute and
+slots nothing. Placed in a `dialog`, it lists exactly the bindings that the foundation's keys
+module's `bindings(dialog)` gives with that dialog closed, the ones the page has outside it, in
+that order:
+
+```html
+<dialog id="help" aria-labelledby="help-title">
+  <h2 id="help-title">Keyboard shortcuts</h2>
+  <sl-shortcuts></sl-shortcuts>
+</dialog>
+```
+
+- Its shadow root holds a table of two columns, Keys and Action. A row's keys are the binding's
+  sequences, each key in a `<kbd>` as the foundation's keys grammar labels it, joined by `+`,
+  "then", and "or". Its action is a button named by the binding, its `register()` label or its
+  element's name, which closes the dialog and runs the binding as its keys would.
+- A row the reader's setting turns off, character keys alone while character keys are off, shows
+  the word "off" after its keys, which assistive technology reads with them, in the muted text
+  tier, and carries the class `off`. Combinations with Control, Alt, or Meta stay on.
+- It writes no row that `bindings()` doesn't give: the foundation's fixed Escape row, "Leave a
+  field", is no binding and is left out. The dialog's own controls, such as its Close, are inside
+  the dialog and so left out too.
+- The foundation's screen-reader note follows the table: a screen reader may take a key first,
+  and how NVDA, JAWS, Narrator, and VoiceOver pass the next key through. It is exported as `NOTE`.
+- It reads the bindings again as the dialog opens, since they change with the page's state, and
+  as the reader's settings change: a `change` event in the document, as a settings form sends,
+  and a `storage` event, as another tab's change sends.
+- It holds no settings, no character-key switch and no wait, and renders no `[data-keys-list]`,
+  so the keys module never fills it and never loads its `keys-help.js`.
+
 ## Development
 
 Tasks run through [mise](https://mise.jdx.dev):
@@ -409,11 +443,12 @@ mise run currency                     # report every tool, package, and action p
 
 `test/fixtures/section-tree.html` is the section tree's fixture page,
 `test/fixtures/section-tree-short.html` its page of sections shorter than a screen,
-`test/fixtures/drawer.html` the drawer cases' page, and `test/fixtures/sites/` holds the fixture
-sites served at their project sites' paths: the architecture stand-in's, with the site nav, the
-site index in its Pages drawer and opener, and the page header; sqlate's, with the site nav as
-built, a site deployed behind; a fourth site's, with a site nav whose `SITES` lists it too, a site
-deployed ahead; and the org's lists for `src`, `sites.json` naming all four. The browser tier
+`test/fixtures/drawer.html` the drawer cases' page, `test/fixtures/shortcuts.html` the
+shortcuts list's page of several bindings in a help dialog, and `test/fixtures/sites/` holds the
+fixture sites served at their project sites' paths: the architecture stand-in's, with the site
+nav, the site index in its Pages drawer and opener, and the page header; sqlate's, with the site
+nav as built, a site deployed behind; a fourth site's, with a site nav whose `SITES` lists it too,
+a site deployed ahead; and the org's lists for `src`, `sites.json` naming all four. The browser tier
 runs on them in the pinned chrome-headless-shell, and `mise run screenshots` captures them
 through the `spike-html-apps-screenshots` bin of
 [spike-html-apps-tooling](https://github.com/JaimeStill/spike-html-apps-tooling).

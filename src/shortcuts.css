@@ -1,0 +1,26 @@
+/*
+ * The shortcuts list's layout in a shadow root: shortcuts.ts adopts this sheet into its root after
+ * the foundation's reset and elements sheets (baseline/reset.css and elements.css), so its table,
+ * kbd, and buttons look as the foundation's elements layer draws them in a page. It reads only the
+ * foundation's baseline tokens, which a shadow root takes by inheritance from the page's entry, and
+ * every length is a --space-* step. Unlayered, it sits above the adopted layers in the root.
+ *
+ * A row turned off by the reader's setting shows its keys and the word "off" in the muted text
+ * tier, its button left as it is, since the button still runs the binding. The note is the muted
+ * text tier at the small size, below the table.
+ */
+
+:host {
+  display: block;
+}
+tr.off td:first-child {
+  color: var(--fg-2);
+}
+tr.off kbd {
+  --kbd-color: var(--fg-2);
+}
+.note {
+  margin-block: var(--space-s) 0;
+  font-size: var(--text-s);
+  color: var(--fg-2);
+}

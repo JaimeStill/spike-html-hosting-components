@@ -1,0 +1,89 @@
+<!doctype html>
+<!-- The shortcuts list's fixture page: a help dialog holding sl-shortcuts, opened by ? or its
+     button, and a page of several bindings to list: the Help button's ?, a link bound to the
+     sequence G then E, a Search button bound to Control+K, which the off switch leaves on, an
+     sl-section-tree whose H and L its register() binds, and a binding the page registers itself,
+     Alt+N, that counts its runs in window.ran. The dialog's Close is bound to ? too, inside the
+     dialog, so bindings() leaves it out. The foundation's full entry styles the page, and
+     window.keys is the installed foundation's keys module, the one the element reads.
+     window.errors collects every error and unhandled rejection the page raises; window.ready
+     settles once both elements have rendered and the page's binding is registered. The import map
+     is section-tree.html's. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>shortcuts fixture</title>
+    <script>
+      window.errors = [];
+      window.addEventListener("error", (event) => window.errors.push(String(event.message)));
+      window.addEventListener("unhandledrejection", (event) =>
+        window.errors.push(String(event.reason)),
+      );
+    </script>
+    <link rel="stylesheet" href="/deps/@jaimestill/spike-html-apps-foundation/dist/page-full.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "lit": "/deps/lit/index.js",
+          "lit/": "/deps/lit/",
+          "lit-html": "/deps/lit-html/lit-html.js",
+          "lit-html/": "/deps/lit-html/",
+          "lit-element/": "/deps/lit-element/",
+          "@lit/reactive-element": "/deps/@lit/reactive-element/reactive-element.js",
+          "@lit/reactive-element/": "/deps/@lit/reactive-element/",
+          "@jaimestill/spike-html-apps-foundation/": "/deps/@jaimestill/spike-html-apps-foundation/dist/",
+          "@jaimestill/spike-html-hosting-icons/octicon/arrow-down-16": "/deps/@jaimestill/spike-html-hosting-icons/dist/octicon/arrow-down-16.js",
+          "@jaimestill/spike-html-hosting-icons/octicon/arrow-up-16": "/deps/@jaimestill/spike-html-hosting-icons/dist/octicon/arrow-up-16.js",
+          "@jaimestill/spike-html-hosting-icons/octicon/x-16": "/deps/@jaimestill/spike-html-hosting-icons/dist/octicon/x-16.js"
+        }
+      }
+    </script>
+    <script type="module">
+      import "@jaimestill/spike-html-apps-foundation/register-full.js";
+      import * as keys from "@jaimestill/spike-html-apps-foundation/keys.js";
+      import "/dist/section-tree.js";
+      import "/dist/shortcuts.js";
+
+      window.keys = keys;
+      window.ran = 0;
+      keys.register("Alt+n", "New note", () => window.ran++);
+      window.ready = Promise.all(
+        ["sl-section-tree", "sl-shortcuts"].map((tag) =>
+          customElements.whenDefined(tag).then(() => document.querySelector(tag).updateComplete),
+        ),
+      );
+    </script>
+  </head>
+  <body>
+    <header>
+      <h1>Shortcuts</h1>
+      <p>
+        <button type="button" commandfor="help" command="show-modal" aria-label="Help" data-keys="?">
+          <span aria-hidden="true"><kbd>?</kbd></span>
+        </button>
+        <button type="button" id="search" data-keys="Control+k">Search <kbd>Ctrl</kbd>+<kbd>K</kbd></button>
+        <a href="#end" data-keys="g e">End</a>
+      </p>
+    </header>
+    <aside>
+      <sl-section-tree label="On this page">
+        <ul>
+          <li><a href="#first">First</a></li>
+          <li><a href="#end">End</a></li>
+        </ul>
+      </sl-section-tree>
+    </aside>
+    <main>
+      <h2 id="first">First</h2>
+      <p>A section to move to.</p>
+      <h2 id="end">End</h2>
+      <p>The last section.</p>
+    </main>
+    <dialog id="help" aria-labelledby="help-title">
+      <h2 id="help-title">Keyboard shortcuts</h2>
+      <sl-shortcuts></sl-shortcuts>
+      <button type="button" commandfor="help" command="close" data-keys="?">Close <kbd>?</kbd></button>
+    </dialog>
+  </body>
+</html>
