@@ -105,9 +105,9 @@ export default defineConfig([
       "import-x/no-unresolved": "error",
       // Each judges an import against package.json: a package name it doesn't declare in
       // dependencies or peerDependencies, where the foundation and the icons are (a devDependency
-      // alone ships nothing, and includeInternal holds the package's own name, which resolves
-      // inside it, to the same), in every import form (includeTypes), and a relative path that
-      // reaches another package's files.
+      // alone ships nothing), in every import form (includeTypes), and a relative path that
+      // reaches another package's files. The package's own name passes here, since the manifest
+      // has an exports field; the layer table refuses it, as a name the table doesn't allow.
       "import-x/no-extraneous-dependencies": [
         "error",
         { devDependencies: false, includeInternal: true, includeTypes: true },
