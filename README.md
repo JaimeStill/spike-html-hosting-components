@@ -1,11 +1,11 @@
 # spike-html-hosting-components
 
 The documentation components layer of spike-html-hosting: six Lit elements with shadow roots,
-their sheets, and the glyph button's sheet, that the spike's GitHub Pages sites build their pages
-from, the section tree, the site index, the nav between the sites, the drawer that holds the
-site index where its column doesn't fit, the list of the page's keyboard shortcuts in its Help
-dialog, and the reader's settings in its Settings dialog. It is ES modules
-with their type declarations and stylesheets, built on
+their sheets, and the glyph button's sheet, from which the spike's GitHub Pages sites build their
+pages. The elements are the section tree, the site index, the nav between the sites, the drawer
+that holds the site index or the section tree where its column doesn't fit, the list of the
+page's keyboard shortcuts in its Help dialog, and the reader's settings in its Settings dialog.
+The package is ES modules with their type declarations and stylesheets, built on
 [spike-html-apps-foundation](https://github.com/JaimeStill/spike-html-apps-foundation) and drawing
 its glyphs from [spike-html-hosting-icons](https://github.com/JaimeStill/spike-html-hosting-icons),
 both of which it takes as peers, and is released by git tag.
@@ -104,10 +104,10 @@ once.
 
 A shortcut dialog is a pattern, not an element: markup the page writes from native parts, which
 no module of this package defines. A key and its opener, a [glyph button](#glyph-buttons), open a
-native modal dialog that opens with a header row, a heading naming it and a Close glyph button
-with the hint Esc, over whatever content its focused operation needs. It gives any focused
-interface overlaid on the page a key: the reader's settings and the page's shortcuts are its two
-instances here.
+native modal dialog. The dialog opens with a header row, a heading naming it and a Close glyph
+button with the hint Esc, followed by whatever content its focused operation needs. The pattern
+gives any focused interface overlaid on the page a key: the reader's settings and the page's
+shortcuts are its two instances here.
 
 The opener is a native `<button class="glyph-button">`:
 
@@ -134,10 +134,10 @@ The dialog is a native `<dialog>`:
 - Its Close is a glyph button, `commandfor="<dialog id>"` and `command="close"`, named "Close" by
   its `aria-label`, showing Octicons' `x-16` and the hint `<kbd>Esc</kbd>`, with its own interest
   hint. Nothing follows the content: the Close is the header row's, never a trailing one. Escape
-  closes a modal dialog natively, from anywhere in it, a field included. The Close
-  takes no `data-keys`, and the opener's key doesn't close it: the keys module passes over a key
-  pressed in a field, and a shortcut dialog's content is often one, so the key would close it
-  only some of the time.
+  closes a modal dialog natively, from anywhere in it, a field included. The Close takes no
+  `data-keys`, and the opener's key doesn't close it: the keys module passes over a key pressed in
+  a field, and a shortcut dialog's content is often one, so the key would close it only some of
+  the time.
 
 This package ships no sheet for the dialog: the SDK's `site.css` lays it out. The header row puts
 the heading at its inline start and the Close at its inline end, aligned on their centers, with
@@ -406,9 +406,8 @@ a switch between the modes swaps only the shadow root's wrapper around the same 
   `h2` and a Close button that shows Octicons' `x-16` alone, named "Close" and the label by its
   visually hidden text; the `close` slot replaces "Close" there, for a translation. It is a
   [glyph button](#glyph-buttons), showing that name, the slot's text and the label, in its hint on
-  hover and keyboard focus. The Close
-  button, Escape, `close()`, `toggle()`, or `open` set false closes it, and focus returns to the
-  element that held it.
+  hover and keyboard focus. The Close button, Escape, `close()`, `toggle()`, or `open` set false
+  closes it, and focus returns to the element that held it.
 - `open` and `close` go out, bubbling and composed, each time the modal drawer opens or closes,
   never on a switch between the modes or on removal. The mode is a custom state, `docked` or
   `drawer`.
@@ -418,9 +417,9 @@ a switch between the modes swaps only the shadow root's wrapper around the same 
 
 A site shell holds two drawers. Its site index is in a drawer labeled "Pages", `id="pages"`,
 docked from `86rem`; on the pages
-[spike-html-hosting-sdk](https://github.com/JaimeStill/spike-html-hosting-sdk) copies, the
-page's section tree is in a drawer labeled "Contents", `id="contents"`, docked from `70rem`,
-which the SDK writes: `<sl-drawer id="contents" label="Contents" dock="70rem">` holding an
+[spike-html-hosting-sdk](https://github.com/JaimeStill/spike-html-hosting-sdk) copies, the page's
+section tree is in a drawer labeled "Contents", `id="contents"`, docked from `70rem`, which the
+SDK writes: `<sl-drawer id="contents" label="Contents" dock="70rem">` holding an
 [`sl-section-tree`](#sl-section-tree) of the page's section links. Each drawer's opener is in the
 header, page markup and the page's script rather than the drawer's:
 
@@ -622,7 +621,10 @@ gives with that dialog closed, the ones the page has outside it, in that order:
 
 ```html
 <dialog id="help" aria-labelledby="help-title">
-  <h2 id="help-title">Keyboard shortcuts</h2>
+  <header class="dialog-header">
+    <h2 id="help-title">Keyboard shortcuts</h2>
+    …
+  </header>
   <sl-shortcuts></sl-shortcuts>
 </dialog>
 ```
@@ -656,7 +658,10 @@ takes no attribute and slots nothing. The dialog, its heading, and its Close are
 
 ```html
 <dialog id="settings" aria-labelledby="settings-title">
-  <h2 id="settings-title">Settings</h2>
+  <header class="dialog-header">
+    <h2 id="settings-title">Settings</h2>
+    …
+  </header>
   <sl-settings></sl-settings>
 </dialog>
 ```

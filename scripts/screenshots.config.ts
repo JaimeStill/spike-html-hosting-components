@@ -5,12 +5,11 @@
 // drawer, wide with the drawer docked, narrow with it closed and open by P, and with its theme
 // menu open; one site deployed ahead of another, the fourth fixture site's index page and the
 // sqlate one's, each with its built site nav and with its src naming the org fixture site's
-// list, wide; the profile's
-// facets, palette, space, and type, at flexoki, regular, and mono; --all's profiles, every palette
-// at the defaults, then compact and sans at flexoki; the profiles each page registers, from the
-// foundation's registry; and the repository served as the browser tier serves it. The files go
-// to a fresh directory under TMPDIR, or to --dir's, never into the repository unless --dir names
-// its gitignored captures/.
+// list, wide; the profile's facets, palette, space, and type, at flexoki, regular, and mono;
+// --all's profiles, every palette at the defaults, then compact and sans at flexoki; the profiles
+// each page registers, from the foundation's registry; and the repository served as the browser
+// tier serves it. The files go to a fresh directory under TMPDIR, or to --dir's, never into the
+// repository unless --dir names its gitignored captures/.
 // Adapted from spike-html-apps-components (51d2b92): scripts/screenshots.config.ts, its pages
 // the section tree's fixture and the architecture fixture site's.
 
