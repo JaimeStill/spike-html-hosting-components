@@ -6,6 +6,81 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the packag
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-09
+
+The release removes `sl-page-header` and `sl-section-tree`'s bar, buttons, and `dock`, and moves
+the tree's keys from H and L to J and K: breaking changes, which a minor release carries before
+1.0.0. A site that uses any of them changes its markup or its imports as the entries below say.
+
+### Added
+
+- `glyph-button.css`, the glyph button: the class `glyph-button` on a native `<button>` that shows
+  a glyph and, when it has one, its key hint in a `<kbd>`, in a row centered on the text's line,
+  with the native button's border, surface, and focus ring kept. A component adopts it into its
+  shadow root after the foundation's reset and elements sheets; a page links it after the
+  foundation's entry. Its padding makes the smallest glyph button 24 CSS px a side, WCAG 2.5.8's
+  target size. The button shows its name on hover and keyboard focus by an interest invoker:
+  `interestfor` names a `popover="hint"` of the class `glyph-hint`, `aria-hidden="true"`, whose
+  text is the name, placed below the button, or above it at the viewport's foot. The button
+  carries an empty `aria-description`, since Chromium makes an interest target's text its
+  invoker's description and would read the name twice. Escape dismisses the hint, no script runs,
+  and where `interestfor` isn't supported the hint never shows.
+- `sl-shortcuts`, `shortcuts.js`: the page's keyboard shortcuts for a Help dialog, a table of each
+  binding's keys, each in a `<kbd>`, and its action as plain text, no row a control, exactly as
+  the foundation keys module's `bindings()` gives them with the dialog closed. A row the reader's
+  setting turns off says "off" after its keys. The foundation's screen-reader note follows the
+  table, wrapping to the table's width, so a dialog sized to fit its content fits the table. The
+  element reads the bindings again as the dialog opens and at each settings change, a change event
+  in the document or another tab's storage event. It renders no `[data-keys-list]`, so the keys
+  module never loads its `keys-help.js`.
+- `sl-settings`, `settings.js`: the reader's settings for a Settings dialog. The theme is the
+  foundation theme menu's rows, color, scheme, space, and type, each a radio group drawn as
+  ◀ value ▶, H and L stepping a row and J and K or the arrows moving between rows, beside its
+  inert preview card, laid out by the foundation's `theme-menu.css`. The keyboard settings are
+  the foundation keys help's character-key switch and wait between presses. Every change applies
+  and is stored at once, with no Save and no Cancel, and fires a change event at the host,
+  bubbling and composed, so an open shortcuts list reads it. The rows and the preview are rebuilt
+  here, so the foundation's `theme-menu.js` is never loaded.
+- The README's shortcut dialog pattern: a key and its opener, a glyph button, open a native modal
+  dialog whose header row, a `<header class="dialog-header">`, holds its heading and a Close glyph
+  button with the hint Esc, its content applying at once. Help and Settings are its two instances.
+
+### Changed
+
+- `sl-section-tree` is its links alone, in its `nav` landmark. The link of the section in view
+  carries an accent rule at its inline start and bold text, from `section-tree-links.css`, which
+  the element adopts once into the document or the shadow root it sits in, since its own shadow
+  sheet can't reach the light-DOM links; every link keeps the rule's width, so the mark moves no
+  text. J and K, bound by the foundation keys module's `register()`, move to the next and the
+  previous section, where H and L moved to the previous and the next; the help dialog lists them
+  as "Next section" and "Previous section". `NEXT_KEYS` and `PREVIOUS_KEYS` are now `"j"` and
+  `"k"`.
+- `sl-drawer`'s Close is a glyph button, laid out by `glyph-button.css`, and shows its name, the
+  `close` slot's text and the label, in an interest hint.
+- The README's site shell snippet: the header is the site nav and one group, a
+  `<div class="header-actions">`, of glyph buttons, Pages under P, Contents under C, Help under ?,
+  and Settings under S, each with its interest hint; Help and Settings open their shortcut
+  dialogs. The page's section tree is in a Contents drawer, docked from `70rem` and opened under C
+  below it. The SDK's `site.css` lays the header out in one row from `40rem` and in two below it,
+  the site nav over the group. A page links the foundation's `page-full.css`, then
+  `glyph-button.css`, then the SDK's `site.css`.
+- eslint-plugin-import-x is at 4.18.1 and typescript-eslint at 8.72.2. `no-extraneous-dependencies`
+  drops `includeInternal`, inert since import-x 4.18.0: the package's own name passes there, and
+  the layer table refuses it.
+- A unit case reads the screen-reader note from the installed foundation's `keys-help.js` and from
+  `src/shortcuts.ts`, so a change to either wording, or a foundation pin whose note differs, fails
+  the check.
+
+### Removed
+
+- `sl-section-tree`'s reading progress, its Previous and Next buttons, its sticky bar below `dock`,
+  and the `dock` attribute, with the exports `DOCK`, `PREVIOUS_SHORTCUT`, `NEXT_SHORTCUT`,
+  `PREVIOUS_NAME`, and `NEXT_NAME`. The element no longer sets the root's
+  `scroll-padding-block-start`. A page places the tree in its own column and, where that doesn't
+  fit, in a drawer, as the README's Contents drawer does.
+- `sl-page-header`, `page-header.js` and `page-header.css`: spike-html-hosting-sdk writes a page's
+  front matter as head meta.
+
 ## [0.4.0] - 2026-11-06
 
 ### Added
