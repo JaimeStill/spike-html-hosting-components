@@ -10,7 +10,7 @@
 // preview, and moves, without Save, Cancel, and the snapshot; and src/keys-help.ts, its settings
 // form.
 
-import { html, LitElement, type PropertyDeclarations } from "lit";
+import { html, LitElement, nothing, type PropertyDeclarations } from "lit";
 import { live } from "lit/directives/live.js";
 
 import elements from "@jaimestill/spike-html-apps-foundation/baseline/elements.css" with { type: "css" };
@@ -156,11 +156,11 @@ const shown = (ms: number): string => `${ms / 1000} s`;
  * Every change also fires a change event at the host, bubbling and composed: a control's own
  * change event stops at the shadow root, and the components that follow the reader's settings in
  * the same tab, an open shortcuts list among them, read them again at a change event in the
- * document. The rows and the keyboard settings follow another tab's change,
- * at its storage event, after the preferences module has applied it to the root, and a change
- * event in the document, as another settings form sends. As the dialog opens the element reads
- * both again and focuses the first row's checked radio, unless an element in the dialog has
- * autofocus. Escape is the native dialog's.
+ * document. The rows and the keyboard settings follow another tab's change, at its storage
+ * event, after the preferences module has applied it to the root, and a change event in the
+ * document, as another settings form sends. As the dialog opens the element reads both again and
+ * focuses the first row's checked radio, unless an element in the dialog has autofocus. Escape is
+ * the native dialog's.
  */
 export class Settings extends LitElement {
   static styles = [reset, elements, meta, structure, utilities, themeMenu, styles];
@@ -234,7 +234,7 @@ export class Settings extends LitElement {
           <label>
             ${WAIT_LABEL}
             <select name="wait" @change=${this.#waited}>
-              ${odd ? html`<option value="" .selected=${live(true)}>${shown(wait)}</option>` : ""}
+              ${odd ? html`<option value="" .selected=${live(true)}>${shown(wait)}</option>` : nothing}
               ${WAITS.map(
                 (ms) =>
                   html`<option value=${String(ms)} .selected=${live(ms === wait)}>

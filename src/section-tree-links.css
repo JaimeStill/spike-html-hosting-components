@@ -4,8 +4,8 @@
  * below the slot's top level. It reads only the foundation's baseline tokens, and every length is
  * a --space-* step. Unlayered, it sits above the foundation's layers.
  *
- * Each link of a tree is a block with a rule at its inline start, --space-3xs wide, the step the
- * reading progress's track took, and transparent, and --space-2xs between the rule and the text.
+ * Each link of a tree is a block with a rule at its inline start, --space-3xs wide and
+ * transparent, and --space-2xs between the rule and the text.
  * The link of the section in view, aria-current="location", draws its rule in --accent-color, by
  * default --magenta, what is current, as the foundation's progress takes it, and its text bold, at
  * the elements layer's 600. Every link keeps the rule's width, so the mark moves no text.

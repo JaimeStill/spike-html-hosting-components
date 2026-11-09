@@ -177,19 +177,13 @@ describe("sl-settings", { timeout: 60_000 }, () => {
 
   test("each row's arrows step it, wrapping, applied and stored at once", async () => {
     const all = await rows(page);
-    const attribute: Record<string, string> = {
-      color: "color",
-      scheme: "scheme",
-      space: "space",
-      type: "type",
-    };
     for (const row of all) {
       const at = row.options.indexOf(row.checked!);
       await arrow(page, row.key, 1);
       const next = row.options[(at + 1) % row.options.length];
       assert.equal((await checked(page))[row.key], next, `${row.key}: ▶ checks the next`);
       // The scheme's system leaves data-scheme off; every other name is the attribute.
-      assert.equal((await root(page))[attribute[row.key]], next, `${row.key}: applied to the root`);
+      assert.equal((await root(page))[row.key], next, `${row.key}: applied to the root`);
       assert.equal((await stored(page))?.[row.key], next, `${row.key}: stored at once`);
       await arrow(page, row.key, -1);
       await arrow(page, row.key, -1);

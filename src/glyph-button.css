@@ -17,7 +17,7 @@
  *
  * Each glyph button shows its name on hover and keyboard focus through an interest invoker:
  * interestfor on the button names an element of popover="hint", in the same tree, whose text is
- * the button's aria-label. The browser shows and hides it, Escape dismisses it, and no script runs;
+ * the button's name. The browser shows and hides it, Escape dismisses it, and no script runs;
  * where interestfor isn't supported the hint never shows, and the button keeps its name. The class
  * glyph-hint places the hint below the button, flipped above it where the viewport's foot would
  * cut it, by the implicit anchor its invoker gives it, and draws it as a small label in the page's

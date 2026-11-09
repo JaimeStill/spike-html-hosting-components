@@ -36,9 +36,6 @@ const FIXTURE = "/test/fixtures/section-tree.html";
 /** The page of short sections, whose next heading is past the line when a move lands. */
 const SHORT = "/test/fixtures/section-tree-short.html";
 
-/** The tree, in a page expression. */
-const TREE = `document.querySelector("sl-section-tree")`;
-
 /** The tree's shadow root, in a page expression. */
 const SHADOW = `document.querySelector("sl-section-tree").shadowRoot`;
 
@@ -235,22 +232,13 @@ describe("sl-section-tree", { timeout: 120_000 }, () => {
         inside: ["slot"],
         errors: [],
       });
-      // No reading progress and no move button: the tree is its links alone.
-      const extra: number = await page.evaluate(
-        `${SHADOW}.querySelectorAll("button, kbd, svg, [popover], .progress, .bar, .moves").length`,
-      );
-      assert.equal(extra, 0);
     });
 
     test("is the column of its links at every width, each link shown", async () => {
       for (const width of [1280, 390]) {
         await load({ width });
-        const shown: { links: boolean[]; states: boolean[] } = await page.evaluate(`({
-          links: ${LINKS}.map((a) => a.checkVisibility()),
-          states: [":state(bar)", ":state(docked)"].map((state) => ${TREE}.matches(state)),
-        })`);
-        assert.ok(shown.links.length >= 10 && shown.links.every(Boolean), `links at ${width}px`);
-        assert.deepEqual(shown.states, [false, false], `no mode at ${width}px`);
+        const links: boolean[] = await page.evaluate(`${LINKS}.map((a) => a.checkVisibility())`);
+        assert.ok(links.length >= 10 && links.every(Boolean), `links at ${width}px`);
       }
     });
 

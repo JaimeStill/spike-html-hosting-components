@@ -5,12 +5,12 @@
 // register() binds, and the page's own Alt+N, each key in a kbd, each action the binding's name as
 // plain text, and no Escape row; the dialog's own Close, bound to ? inside it, is left out. Nothing
 // in the shadow root takes focus, so the dialog opened puts focus on its Close. With character
-// keys off, the rows of character keys alone show "off", shown and in the
-// text read, and the combinations don't; the list follows a change of the setting from another
-// tab while open, and the page's state at each open. The foundation's screen-reader note follows
-// the table, and the element holds no setting. In a container sized to fit, the element is its
-// table's width, or the note's minimum under a narrow table, and the note wraps at the element's. No request for the foundation's keys-help module
-// is ever made, and no [data-keys-list] is in the page.
+// keys off, the rows of character keys alone show "off", shown and in the text read, and the
+// combinations don't; the list follows a change of the setting from another tab while open, and
+// the page's state at each open. The foundation's screen-reader note follows the table, and the
+// element holds no setting. In a container sized to fit, the element is its table's width, or the
+// note's minimum under a narrow table, and the note wraps at the element's. No request for the
+// foundation's keys-help module is ever made, and no [data-keys-list] is in the page.
 
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";

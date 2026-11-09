@@ -235,9 +235,9 @@ export class Drawer extends LitElement {
     // translated text in the slot still names what the button closes. The glyph is the icons
     // layer's svg string, a constant, which unsafeHTML parses once into the button. interestfor
     // shows the name in a hint popover beside it on hover and keyboard focus: the slot's text,
-    // rendered again at each slotchange, and the label, the name's own words. Chromium makes an interest
-    // target's text its invoker's description, so the name would be read twice; the empty
-    // aria-description comes first among the description's sources and leaves none, and
+    // rendered again at each slotchange, and the label, the name's own words. Chromium makes an
+    // interest target's text its invoker's description, so the name would be read twice; the
+    // empty aria-description comes first among the description's sources and leaves none, and
     // aria-hidden keeps the hint out of the accessibility tree while it shows.
     return html`<dialog aria-labelledby="title" @close=${this.#closed}>
       <header>
