@@ -742,7 +742,10 @@ describe("drawer", { timeout: 60_000 }, () => {
   });
 
   // Escape with the hint shown, in the modal drawer, goes to the dialog: it cancels and closes,
-  // and the hint, inside it, closes with it, in the one press, as Chromium orders them.
+  // and the hint, inside it, closes with it, in the one press, as Chromium orders them. A popover's
+  // toggle event is queued as a task, not dispatched as its state changes: the listeners go on a
+  // task after the hint shows, so its opening toggle has fired, and the order is read only once
+  // the closing toggle is in it, not once :popover-open is false, which can come first.
   for (const [how, show] of [
     ["hovering it", hoverClose],
     ["keyboard focus on it", openByKeyboard],
@@ -760,9 +763,13 @@ describe("drawer", { timeout: 60_000 }, () => {
         (${CLOSE}).interestForElement.addEventListener("toggle", (event) =>
           window.order.push("hint " + event.newState));
       })()`);
+      await page.evaluate(`new Promise((resolve) => setTimeout(resolve)).then(() => {
+        window.order = [];
+      })`);
       await press("Escape", 27);
       await closedHeard(1);
       await untilHint(page, CLOSE, false);
+      await until(page, `window.order.includes("hint closed")`);
       assert.deepEqual(await page.evaluate("window.order"), ["cancel", "close", "hint closed"]);
       const shown = await read();
       assert.deepEqual([shown.open, shown.dialogOpen, shown.focused], [false, false, "opener"]);
