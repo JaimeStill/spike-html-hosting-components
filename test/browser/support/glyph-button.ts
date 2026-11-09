@@ -3,8 +3,9 @@
 // and a plain native button in the same root, so a case fails when a length is literal or the
 // native border and surface are lost; the button's box, held to WCAG 2.5.8's 24 CSS px; the
 // interest hint its interestfor names, resolved in the button's own tree, a hint popover holding
-// the button's name; and the name the page's accessibility tree exposes for it, with no
-// description, so the name is announced once.
+// the button's name; the name the page's accessibility tree exposes for it, with no description,
+// so the name is announced once; and the mouse moved onto the button, or off it, as a user points
+// at it to show the hint.
 
 import assert from "node:assert/strict";
 
@@ -183,3 +184,19 @@ export const hintShown = (
 /** Waits until the button's hint is open, or closed. */
 export const untilHint = (page: Page, button: string, open: boolean): Promise<void> =>
   until(page, `(${button}).interestForElement?.matches(":popover-open") === ${open}`);
+
+/**
+ * Moves the mouse onto the center of the button the page expression `button` names, as a user
+ * points at it; the hint shows once the browser's interest delay has passed.
+ */
+export async function hover(page: Page, button: string): Promise<void> {
+  const { x, y }: { x: number; y: number } = await page.evaluate(`(() => {
+    const { left, top, width, height } = (${button}).getBoundingClientRect();
+    return { x: left + width / 2, y: top + height / 2 };
+  })()`);
+  await page.cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x, y });
+}
+
+/** Moves the mouse to the viewport's top-left corner, off any button. */
+export const pointAway = (page: Page): Promise<unknown> =>
+  page.cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: 0, y: 0 });

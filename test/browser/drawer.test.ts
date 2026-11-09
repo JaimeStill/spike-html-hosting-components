@@ -11,10 +11,11 @@
 // behind inert and focus inside, closed by its Close button, Escape, close(), toggle(), or open,
 // focus returned to the opener; the Close button showing the x-16 glyph alone, named Close and the
 // label by its visually hidden text, which its slot replaces; the Close button a glyph button
-// whose interest hint, shown on its keyboard focus, is its name, the slot's replacement and a
-// changed label followed, the name announced once with no description; open and close sent once
-// each, bubbling and composed, never on a mode switch or on removal, which closes it, a drawer put
-// back closed and opening modally again; a switch in either direction, by the viewport or by dock,
+// whose interest hint, shown on hover and on its keyboard focus, is its name, Escape with it shown
+// hiding it as it closes the drawer, the slot's replacement and a changed label followed, the name
+// announced once with no description; open and close sent once each, bubbling and composed, never
+// on a mode switch or on removal, which closes it, a drawer put back closed and opening modally
+// again; a switch in either direction, by the viewport or by dock,
 // keeping the very same slotted elements, never disconnected, and what was typed and counted in
 // them; the slide's transition, absent under reduced motion and on a switch; and the slide from
 // the inline-start edge, the left, or the right in a right-to-left page.
@@ -39,6 +40,8 @@ import {
   descriptions,
   glyphButton,
   hintShown,
+  hover,
+  pointAway,
   untilHint,
 } from "./support/glyph-button.ts";
 import { assertGlyph, exposed, glyph, type AXNode } from "./support/glyphs.ts";
@@ -718,6 +721,53 @@ describe("drawer", { timeout: 60_000 }, () => {
     const shown = await hintShown(page, CLOSE);
     assert.ok(shown.open && (shown.below || shown.above) && shown.overlaps, JSON.stringify(shown));
   });
+
+  // The drawer opened by the keyboard, focus moved on to the filter field and the mouse off the
+  // Close button, so its hint is closed, then the Close button hovered.
+  const hoverClose = async () => {
+    await openByKeyboard();
+    await page.evaluate(`document.querySelector("#filter").focus()`);
+    await pointAway(page);
+    await untilHint(page, CLOSE, false);
+    await hover(page, CLOSE);
+  };
+
+  test("hovering the Close button, focus elsewhere, shows its hint beside it after the interest delay", async () => {
+    await mount(NARROW);
+    await hoverClose();
+    await untilHint(page, CLOSE, true);
+    const shown = await hintShown(page, CLOSE);
+    assert.ok(shown.open && (shown.below || shown.above) && shown.overlaps, JSON.stringify(shown));
+    assert.equal((await read()).focused, "filter", "the hint shows with focus elsewhere");
+  });
+
+  // Escape with the hint shown, in the modal drawer, goes to the dialog: it cancels and closes,
+  // and the hint, inside it, closes with it, in the one press, as Chromium orders them.
+  for (const [how, show] of [
+    ["hovering it", hoverClose],
+    ["keyboard focus on it", openByKeyboard],
+  ] as const) {
+    test(`Escape with the Close button's hint shown by ${how} hides the hint and closes the drawer in one press`, async () => {
+      await mount(NARROW);
+      await show();
+      await untilHint(page, CLOSE, true);
+      await page.evaluate(`(() => {
+        window.order = [];
+        const dialog = document.querySelector("sl-drawer").shadowRoot.querySelector("dialog");
+        for (const type of ["cancel", "close"]) {
+          dialog.addEventListener(type, () => window.order.push(type));
+        }
+        (${CLOSE}).interestForElement.addEventListener("toggle", (event) =>
+          window.order.push("hint " + event.newState));
+      })()`);
+      await press("Escape", 27);
+      await closedHeard(1);
+      await untilHint(page, CLOSE, false);
+      assert.deepEqual(await page.evaluate("window.order"), ["cancel", "close", "hint closed"]);
+      const shown = await read();
+      assert.deepEqual([shown.open, shown.dialogOpen, shown.focused], [false, false, "opener"]);
+    });
+  }
 
   test("Escape closes it, focus returns to the opener, and close goes out once", async () => {
     await mount(NARROW);
