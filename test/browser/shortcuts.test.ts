@@ -228,6 +228,7 @@ describe("sl-shortcuts", { timeout: 60_000 }, () => {
       table: number;
       note: number;
       minimum: number;
+      rows: number;
       lines: number;
     }> => {
       await open(page, false);
@@ -239,6 +240,7 @@ describe("sl-shortcuts", { timeout: 60_000 }, () => {
           table: ${SHADOW}.querySelector("table").getBoundingClientRect().width,
           note: note.getBoundingClientRect().width,
           minimum: parseFloat(style.containIntrinsicInlineSize),
+          rows: ${SHADOW}.querySelectorAll("tbody tr").length,
           lines: Math.round(note.getBoundingClientRect().height / parseFloat(style.lineHeight)),
         };
       })()`);
@@ -246,19 +248,29 @@ describe("sl-shortcuts", { timeout: 60_000 }, () => {
       return sizes;
     };
 
-    // The fixture's short rows: a table narrower than the note's minimum, which the element keeps.
+    // Two short rows, the Help button's ? and the page's Alt+N: the Search button and the link
+    // hidden and the section tree removed, which unregisters its J and K. A table this short is
+    // under the note's minimum whatever the fonts, where the fixture's six rows come near it.
+    await page.evaluate(`(() => {
+      for (const el of document.querySelectorAll('#search, a[data-keys]')) el.hidden = true;
+      document.querySelector("sl-section-tree").remove();
+    })()`);
     const short = await measure();
+    assert.equal(short.rows, 2, "the short table's two rows");
     assert.ok(short.table < short.minimum, `table ${short.table} under ${short.minimum}`);
     assert.ok(Math.abs(short.host - short.minimum) <= 1, `element ${short.host}, ${short.minimum}`);
     assert.equal(short.note, short.host, "the note is the element's width");
     assert.ok(short.lines > 1, "the note wraps");
 
-    // A row of a long action: the element is the table's width, the note wrapped within it.
-    await page.evaluate(
-      `window.keys.register("Alt+l", "An action named at length, to widen the table's second column well past the note's minimum", () => {})`,
-    );
+    // A row of a long action: the element is the table's width, the note wrapped within it. The
+    // action is the note's first sentence, in the same glyphs as the note at a size a ninth
+    // larger: some two and a half times the minimum's sixteen spacing steps, and under half the
+    // note's own line, so the table falls between the two in any font's metrics.
+    const action = NOTE.slice(0, NOTE.indexOf(".") + 1);
+    await page.evaluate(`window.keys.register("Alt+l", ${JSON.stringify(action)}, () => {})`);
     const long = await measure();
-    assert.ok(long.table > long.minimum, `table ${long.table} over ${long.minimum}`);
+    assert.equal(long.rows, 3, "the long action's row added to the short table's");
+    assert.ok(long.table > long.minimum * 1.5, `table ${long.table} well over ${long.minimum}`);
     assert.ok(Math.abs(long.host - long.table) <= 1, `element ${long.host}, table ${long.table}`);
     assert.equal(long.note, long.host, "the note is the element's width");
     assert.ok(long.lines > 1, "the note wraps");
