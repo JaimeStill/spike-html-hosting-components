@@ -8,7 +8,8 @@
 // keys off, the rows of character keys alone show "off", shown and in the
 // text read, and the combinations don't; the list follows a change of the setting from another
 // tab while open, and the page's state at each open. The foundation's screen-reader note follows
-// the table, and the element holds no setting. No request for the foundation's keys-help module
+// the table, and the element holds no setting. In a container sized to fit, the element is its
+// table's width, or the note's minimum under a narrow table, and the note wraps at the element's. No request for the foundation's keys-help module
 // is ever made, and no [data-keys-list] is in the page.
 
 import assert from "node:assert/strict";
@@ -213,6 +214,55 @@ describe("sl-shortcuts", { timeout: 60_000 }, () => {
       })()`);
     assert.deepEqual(shown, { last: "p", note: NOTE, after: true, fields: 0 });
     await close(page);
+  });
+
+  test("in a container sized to fit, the element is its table's width, the note wrapped in it", async () => {
+    // The SDK's Help: as wide as its content, here the element alone, its heading and Close out of
+    // the flow. Each case reads the element's, its table's, and its note's widths, and the note's
+    // intrinsic minimum resolved to pixels.
+    await page.evaluate(`(() => {
+      Object.assign(${HELP}.style, { inlineSize: "fit-content", maxInlineSize: "none" });
+      for (const el of ${HELP}.querySelectorAll("h2, button")) el.style.display = "none";
+    })()`);
+    const measure = async (): Promise<{
+      host: number;
+      table: number;
+      note: number;
+      minimum: number;
+      lines: number;
+    }> => {
+      await open(page, false);
+      const sizes = await page.evaluate(`(() => {
+        const note = ${SHADOW}.querySelector(".note");
+        const style = getComputedStyle(note);
+        return {
+          host: document.querySelector("sl-shortcuts").getBoundingClientRect().width,
+          table: ${SHADOW}.querySelector("table").getBoundingClientRect().width,
+          note: note.getBoundingClientRect().width,
+          minimum: parseFloat(style.containIntrinsicInlineSize),
+          lines: Math.round(note.getBoundingClientRect().height / parseFloat(style.lineHeight)),
+        };
+      })()`);
+      await close(page);
+      return sizes;
+    };
+
+    // The fixture's short rows: a table narrower than the note's minimum, which the element keeps.
+    const short = await measure();
+    assert.ok(short.table < short.minimum, `table ${short.table} under ${short.minimum}`);
+    assert.ok(Math.abs(short.host - short.minimum) <= 1, `element ${short.host}, ${short.minimum}`);
+    assert.equal(short.note, short.host, "the note is the element's width");
+    assert.ok(short.lines > 1, "the note wraps");
+
+    // A row of a long action: the element is the table's width, the note wrapped within it.
+    await page.evaluate(
+      `window.keys.register("Alt+l", "An action named at length, to widen the table's second column well past the note's minimum", () => {})`,
+    );
+    const long = await measure();
+    assert.ok(long.table > long.minimum, `table ${long.table} over ${long.minimum}`);
+    assert.ok(Math.abs(long.host - long.table) <= 1, `element ${long.host}, table ${long.table}`);
+    assert.equal(long.note, long.host, "the note is the element's width");
+    assert.ok(long.lines > 1, "the note wraps");
   });
 
   test("the foundation's keys-help module is never requested", async () => {
