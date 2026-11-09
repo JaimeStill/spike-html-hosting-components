@@ -435,17 +435,18 @@ and only once the drawer is defined; it calls its drawer's `show()` and says thr
 `aria-expanded` whether the drawer is open. Following a link in either drawer closes it, by the
 page's script, so the link's navigation and its scroll land on the page the drawer covered.
 
-The header is the site nav and one group of buttons at its inline end, a
-`<div class="header-actions">`, which holds Pages, Contents, Help under ?, and Settings under S,
-in that order. Each is a [glyph button](#glyph-buttons), showing its glyph and its key hint, named
-by its `aria-label`, and showing that name in its interest hint. Help and Settings open their
+The header is the site nav and one group of buttons, a `<div class="header-actions">`, which
+holds Pages, Contents, Help under ?, and Settings under S, in that order. Each is a
+[glyph button](#glyph-buttons), showing its glyph and its key hint, named by its `aria-label`,
+and showing that name in its interest hint. Help and Settings open their
 [shortcut dialogs](#shortcut-dialogs), each closed by its Close or Escape. The page's markup names
 each glyph by a marker, an empty `<svg data-icon="<set>/<name>">`, which
 [spike-html-hosting-sdk](https://github.com/JaimeStill/spike-html-hosting-sdk) fills with the
 icons module's `svg` at build: Octicons' `list-unordered-16` for Pages, `list-ordered-16` for
 Contents, `question-16` for Help, `gear-16` for Settings, and `x-16` for each dialog's Close. The
-SDK's `site.css` lays out the header and its `header-actions` group: one row, and below `40rem`
-two, the site nav over the group. A page links the foundation's full page entry,
+SDK's `site.css` lays out the header and its `header-actions` group: one row from `40rem`, the
+group at its inline end, and below `40rem` two, the site nav over the group, which sits at the
+row's inline start, aligned with the nav. A page links the foundation's full page entry,
 `page-full.css`, then this package's `glyph-button.css`, then the SDK's `site.css`, and imports
 `shortcuts.js` and `settings.js` beside the elements it shows:
 
