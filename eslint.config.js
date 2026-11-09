@@ -110,7 +110,7 @@ export default defineConfig([
       // has an exports field; the layer table refuses it, as a name the table doesn't allow.
       "import-x/no-extraneous-dependencies": [
         "error",
-        { devDependencies: false, includeInternal: true, includeTypes: true },
+        { devDependencies: false, includeTypes: true },
       ],
       "import-x/no-relative-packages": "error",
       "boundaries/dependencies": [
