@@ -2,7 +2,8 @@
  * The drawer's layout in a shadow root: drawer.ts adopts this sheet into its root after the
  * foundation's reset and elements sheets (baseline/reset.css and elements.css), which give the
  * native dialog its surface, the Close button and the heading their looks and focus ring, and the
- * ::backdrop its scrim, which the drawer covers whole. It holds the docked aside's frame and the
+ * ::backdrop its scrim, which the drawer covers whole, and the components' glyph-button.css, which
+ * centers the Close button's glyph and places its hint. It holds the docked aside's frame and the
  * drawer's: the full viewport, the header both share, the scrolling body, and the slide. It reads
  * only the foundation's baseline tokens, which a shadow root takes by inheritance from the page's
  * entry; its one fixed length is the slide's timing. Unlayered, it sits above the adopted layers in
@@ -17,8 +18,8 @@
  * the inline-start edge and back out unless the reader prefers reduced motion; the slide is a
  * translate, which moves nothing else.
  *
- * Adapted from spike-html-apps-components (51d2b92): src/drawer.css, its Close button centering
- * its glyph.
+ * Adapted from spike-html-apps-components (51d2b92): src/drawer.css, its Close button a glyph
+ * button, laid out by glyph-button.css.
  */
 
 :host {
@@ -84,11 +85,6 @@ h2 {
   overscroll-behavior: contain;
   padding: var(--space-s);
   scroll-padding: var(--space-s);
-}
-/* The Close button shows its glyph alone, a block in the reset, centered in the button. */
-header button {
-  display: inline-flex;
-  align-items: center;
 }
 /* The close slot's text and the label, the Close button's name, which take no space. */
 .hidden {

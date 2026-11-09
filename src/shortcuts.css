@@ -1,0 +1,38 @@
+/*
+ * The shortcuts list's layout in a shadow root: shortcuts.ts adopts this sheet into its root after
+ * the foundation's reset and elements sheets (baseline/reset.css and elements.css), so its table
+ * and kbd look as the foundation's elements layer draws them in a page. It reads only the
+ * foundation's baseline tokens, which a shadow root takes by inheritance from the page's entry, and
+ * every length is a --space-* step. Unlayered, it sits above the adopted layers in the root.
+ *
+ * A row turned off by the reader's setting shows its keys and the word "off" in the muted text
+ * tier, its action left as it is. The note is the muted text tier at the small size, below the
+ * table.
+ *
+ * The element is as wide as its table: the note wraps within the table's width and gives the
+ * element none of its own, so a container sized to fit its content, as a help dialog of
+ * inline-size: fit-content is, fits the table rather than the note's one long line. Inline-size
+ * containment takes the note out of the element's intrinsic inline sizes; in their place it
+ * counts as --space-2xl four times over, sixteen --space-base steps, a short column of the note's
+ * small text, so a table of a row or two still leaves the note a legible measure. That is a
+ * minimum of the intrinsic size alone: a container narrower than it still takes the note, which
+ * fills its line as any block does. An engine without contain-intrinsic-inline-size counts the
+ * note as nothing, and the element is the table's width alone.
+ */
+
+:host {
+  display: block;
+}
+tr.off td:first-child {
+  color: var(--fg-2);
+}
+tr.off kbd {
+  --kbd-color: var(--fg-2);
+}
+.note {
+  margin-block: var(--space-s) 0;
+  font-size: var(--text-s);
+  color: var(--fg-2);
+  contain: inline-size;
+  contain-intrinsic-inline-size: calc(var(--space-2xl) * 4);
+}

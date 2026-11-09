@@ -4,8 +4,9 @@
 // over a body holding the slot. The mode is the viewport's, by a media query on `dock`; a switch
 // swaps only the shadow root's wrapper and its slot, so the slotted content, the host's own
 // children, is never moved, disconnected, or re-created.
-// Adapted from spike-html-apps-components (51d2b92): src/drawer.ts, its Close button showing the
-// icons layer's x-16 glyph alone, its text visually hidden.
+// Adapted from spike-html-apps-components (51d2b92): src/drawer.ts, its Close button a glyph
+// button showing the icons layer's x-16 glyph alone, its text visually hidden and shown on interest
+// in a hint.
 
 import { html, LitElement, type PropertyDeclarations, type PropertyValues } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
@@ -14,10 +15,14 @@ import elements from "@jaimestill/spike-html-apps-foundation/baseline/elements.c
 import reset from "@jaimestill/spike-html-apps-foundation/baseline/reset.css" with { type: "css" };
 import { define, emit } from "@jaimestill/spike-html-apps-foundation/dom.js";
 import x from "@jaimestill/spike-html-hosting-icons/octicon/x-16";
+import glyphButton from "./glyph-button.css" with { type: "css" };
 import styles from "./drawer.css" with { type: "css" };
 
 /** The tag the element defines. */
 export const tagName = "sl-drawer";
+
+/** The Close button's text, before the label, unless the `close` slot replaces it. */
+const CLOSE = "Close";
 
 /** `open`'s detail: empty. */
 export type OpenDetail = Record<string, never>;
@@ -41,7 +46,9 @@ export type CloseDetail = Record<string, never>;
  * moves inside it. Its header holds `label` as a visible `h2` that names the dialog, and a Close
  * button that shows Octicons' x-16, from the icons layer, alone: its name is the `close` slot's
  * text, "Close" by default, for a translation, then the label, "Close Documents", both visually
- * hidden. The header stays in view while the children scroll below it. The Close button,
+ * hidden. It is a glyph button, laid out by glyph-button.css, and shows its name on hover and
+ * keyboard focus in a hint popover, by interestfor, where the browser supports it, announced once
+ * as the name. The header stays in view while the children scroll below it. The Close button,
  * Escape, `close()`, `toggle()`, or `open` set false closes it, and the dialog returns focus to the
  * element that held it when it opened. Under reduced motion it opens and closes at once. `open` in
  * the markup, or set before the element is connected, opens the drawer as the page loads below
@@ -57,7 +64,7 @@ export type CloseDetail = Record<string, never>;
  * Each mode renders only its own header, so the shadow tree holds one heading at a time.
  */
 export class Drawer extends LitElement {
-  static styles = [reset, elements, styles];
+  static styles = [reset, elements, glyphButton, styles];
 
   static properties = {
     open: { type: Boolean, reflect: true },
@@ -199,6 +206,21 @@ export class Drawer extends LitElement {
     emit<CloseDetail>(this, "close", {});
   }
 
+  /**
+   * The Close button's text as the close slot shows it: its assigned children's text, read from the
+   * light DOM at each render, or the default with none, so a hint rendered while the slot is not,
+   * as a docked drawer's switch to a drawer renders it, still matches the name.
+   */
+  #closeText(): string {
+    const assigned = [...this.children].filter((child) => child.slot === "close");
+    if (assigned.length === 0) return CLOSE;
+    return assigned
+      .map((child) => child.textContent ?? "")
+      .join("")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   render() {
     // The docked aside's header is the dialog's without its Close button: one heading, the
     // label, naming the wrapper in either mode.
@@ -208,16 +230,32 @@ export class Drawer extends LitElement {
         <div class="body"><slot></slot></div>
       </aside>`;
     }
-    // The Close button shows its glyph alone, hidden from the accessibility tree; its name is the
-    // close slot's text and the label, both visually hidden, so a translated text in the slot
-    // still names what the button closes. The glyph is the icons layer's svg string, a constant,
-    // which unsafeHTML parses once into the button.
+    // The Close button is a glyph button showing its glyph alone, hidden from the accessibility
+    // tree; its name is the close slot's text and the label, both visually hidden, so a
+    // translated text in the slot still names what the button closes. The glyph is the icons
+    // layer's svg string, a constant, which unsafeHTML parses once into the button. interestfor
+    // shows the name in a hint popover beside it on hover and keyboard focus: the slot's text,
+    // rendered again at each slotchange, and the label, the name's own words. Chromium makes an
+    // interest target's text its invoker's description, so the name would be read twice; the
+    // empty aria-description comes first among the description's sources and leaves none, and
+    // aria-hidden keeps the hint out of the accessibility tree while it shows.
     return html`<dialog aria-labelledby="title" @close=${this.#closed}>
       <header>
         <h2 id="title">${this.label}</h2>
-        <button type="button" @click=${this.close}>
-          ${unsafeHTML(x)}<span class="hidden"><slot name="close">Close</slot> ${this.label}</span>
+        <button
+          type="button"
+          class="glyph-button"
+          interestfor="close-hint"
+          aria-description=""
+          @click=${this.close}
+        >
+          ${unsafeHTML(x)}<span class="hidden"
+            ><slot name="close" @slotchange=${() => this.requestUpdate()}>${CLOSE}</slot> ${this.label}</span
+          >
         </button>
+        <div id="close-hint" class="glyph-hint" popover="hint" aria-hidden="true">
+          ${this.#closeText()} ${this.label}
+        </div>
       </header>
       <div class="body"><slot></slot></div>
     </dialog>`;

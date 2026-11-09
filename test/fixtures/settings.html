@@ -1,0 +1,118 @@
+<!doctype html>
+<!-- The settings' fixture page: a Settings dialog holding sl-settings, opened by S or its button,
+     a help dialog holding sl-shortcuts, opened by ? or its button, and a page of the bindings the
+     settings turn off: the Help button's ?, the Settings button's S, a Pages button's P, which
+     counts its clicks in window.pages, a Search button bound to Control+K, which the off switch
+     leaves on, and an sl-section-tree whose J and K its register() binds, over sections tall
+     enough to move between. Each dialog's Close is bound to its opener's key, inside the dialog.
+     The foundation's full entry styles the page and registers every profile, and window.keys and
+     window.preferences are the installed foundation's keys and preferences modules, the ones the
+     element reads. window.errors collects every error and unhandled rejection the page raises;
+     window.ready settles once the three elements have rendered. The import map is
+     shortcuts.html's. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>settings fixture</title>
+    <script>
+      window.errors = [];
+      window.addEventListener("error", (event) => window.errors.push(String(event.message)));
+      window.addEventListener("unhandledrejection", (event) =>
+        window.errors.push(String(event.reason)),
+      );
+    </script>
+    <link rel="stylesheet" href="/deps/@jaimestill/spike-html-apps-foundation/dist/page-full.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "lit": "/deps/lit/index.js",
+          "lit/": "/deps/lit/",
+          "lit-html": "/deps/lit-html/lit-html.js",
+          "lit-html/": "/deps/lit-html/",
+          "lit-element/": "/deps/lit-element/",
+          "@lit/reactive-element": "/deps/@lit/reactive-element/reactive-element.js",
+          "@lit/reactive-element/": "/deps/@lit/reactive-element/",
+          "@jaimestill/spike-html-apps-foundation/": "/deps/@jaimestill/spike-html-apps-foundation/dist/",
+          "@jaimestill/spike-html-hosting-icons/octicon/x-16": "/deps/@jaimestill/spike-html-hosting-icons/dist/octicon/x-16.js"
+        }
+      }
+    </script>
+    <script type="module">
+      import "@jaimestill/spike-html-apps-foundation/register-full.js";
+      import * as preferences from "@jaimestill/spike-html-apps-foundation/preferences.js";
+      import * as keys from "@jaimestill/spike-html-apps-foundation/keys.js";
+      import "/dist/section-tree.js";
+      import "/dist/shortcuts.js";
+      import "/dist/settings.js";
+
+      window.keys = keys;
+      window.preferences = preferences;
+      window.pages = 0;
+      document.querySelector("#pages").addEventListener("click", () => window.pages++);
+      window.ready = Promise.all(
+        ["sl-section-tree", "sl-shortcuts", "sl-settings"].map((tag) =>
+          customElements.whenDefined(tag).then(() => document.querySelector(tag).updateComplete),
+        ),
+      );
+    </script>
+    <style>
+      main > section {
+        min-block-size: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Settings</h1>
+      <p>
+        <button type="button" id="pages" aria-label="Pages" data-keys="p">
+          <span aria-hidden="true"><kbd>P</kbd></span>
+        </button>
+        <button type="button" commandfor="help" command="show-modal" aria-label="Help" data-keys="?">
+          <span aria-hidden="true"><kbd>?</kbd></span>
+        </button>
+        <button
+          type="button"
+          commandfor="settings"
+          command="show-modal"
+          aria-label="Settings"
+          data-keys="s"
+        >
+          <span aria-hidden="true"><kbd>S</kbd></span>
+        </button>
+        <button type="button" id="search" data-keys="Control+k">Search <kbd>Ctrl</kbd>+<kbd>K</kbd></button>
+      </p>
+    </header>
+    <aside>
+      <sl-section-tree label="On this page">
+        <ul>
+          <li><a href="#first">First</a></li>
+          <li><a href="#second">Second</a></li>
+        </ul>
+      </sl-section-tree>
+    </aside>
+    <main>
+      <section>
+        <h2 id="first">First</h2>
+        <p>A section to move to.</p>
+      </section>
+      <section>
+        <h2 id="second">Second</h2>
+        <p>The last section.</p>
+      </section>
+    </main>
+    <dialog id="help" aria-labelledby="help-title">
+      <h2 id="help-title">Keyboard shortcuts</h2>
+      <sl-shortcuts></sl-shortcuts>
+      <button type="button" commandfor="help" command="close" data-keys="?">Close <kbd>?</kbd></button>
+    </dialog>
+    <dialog id="settings" aria-labelledby="settings-title">
+      <h2 id="settings-title">Settings</h2>
+      <sl-settings></sl-settings>
+      <button type="button" id="settings-close" commandfor="settings" command="close" data-keys="s">
+        Close <kbd>S</kbd>
+      </button>
+    </dialog>
+  </body>
+</html>

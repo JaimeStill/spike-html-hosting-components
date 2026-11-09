@@ -1,0 +1,48 @@
+/*
+ * The glyph button, a control of its own beside the text button: the class glyph-button on a
+ * native <button>, showing a glyph, the icons layer's svg, a block in the reset, and, when the
+ * control has one, its key hint, a kbd, in a row centered on the text's line. A component adopts
+ * this sheet into its shadow root after the foundation's reset and elements sheets
+ * (baseline/reset.css and elements.css), before its own; a page links it after the foundation's
+ * entry. It keeps the native button the elements layer draws, its border, radius, surface, hover,
+ * and focus ring, and sets only the row and the padding: --space-3xs block and --space-2xs inline,
+ * a quarter and a half of the text button's --space-s, which would spend a glyph's width on
+ * padding either side. --space-3xs separates the glyph from its hint. It reads only the
+ * foundation's baseline tokens, which a shadow root takes by inheritance from the page's entry,
+ * and every length is a --space-* step. Unlayered, it sits above the foundation's layers, in a
+ * shadow root and in a page.
+ *
+ * A 1em glyph and the block padding make the smallest glyph button, the glyph alone in the compact
+ * space profile at its narrowest, 24 CSS px a side with the border: WCAG 2.5.8's target size.
+ *
+ * Each glyph button shows its name on hover and keyboard focus through an interest invoker:
+ * interestfor on the button names an element of popover="hint", in the same tree, whose text is
+ * the button's name. The browser shows and hides it, Escape dismisses it, and no script runs;
+ * where interestfor isn't supported the hint never shows, and the button keeps its name. The class
+ * glyph-hint places the hint below the button, flipped above it where the viewport's foot would
+ * cut it, by the implicit anchor its invoker gives it, and draws it as a small label in the page's
+ * colors reversed, the text color its fill, so it stands apart from any surface with no border.
+ */
+
+.glyph-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  padding: var(--space-3xs) var(--space-2xs);
+}
+
+.glyph-hint {
+  position-area: block-end;
+  position-try-fallbacks: flip-block;
+  inset: auto;
+  margin: 0;
+  margin-block-start: var(--space-3xs);
+  padding: var(--space-3xs) var(--space-2xs);
+  border: none;
+  background-color: var(--fg);
+  color: var(--bg);
+  font-family: var(--font-ui);
+  font-size: var(--text-s);
+  line-height: var(--leading-ui);
+  white-space: nowrap;
+}

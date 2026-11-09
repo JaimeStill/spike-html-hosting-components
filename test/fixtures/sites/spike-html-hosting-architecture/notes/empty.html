@@ -1,8 +1,8 @@
 <!doctype html>
 <!-- A nested page of the architecture fixture site, served at
      /spike-html-hosting-architecture/notes/empty.html: index.html's page, its site components and
-     its loading the same, its front matter empty, so its sl-page-header slots an empty dl and
-     renders nothing. The site index marks this page's link, under a directory with no index page.
+     its loading the same. The site index marks this page's link, under a directory with no index
+     page.
      index.html's comment describes the rest. -->
 <html lang="en">
   <head>
@@ -84,8 +84,6 @@
           "@lit/reactive-element": "/deps/@lit/reactive-element/reactive-element.js",
           "@lit/reactive-element/": "/deps/@lit/reactive-element/",
           "@jaimestill/spike-html-apps-foundation/": "/deps/@jaimestill/spike-html-apps-foundation/dist/",
-          "@jaimestill/spike-html-hosting-icons/octicon/arrow-down-16": "/deps/@jaimestill/spike-html-hosting-icons/dist/octicon/arrow-down-16.js",
-          "@jaimestill/spike-html-hosting-icons/octicon/arrow-up-16": "/deps/@jaimestill/spike-html-hosting-icons/dist/octicon/arrow-up-16.js",
           "@jaimestill/spike-html-hosting-icons/octicon/x-16": "/deps/@jaimestill/spike-html-hosting-icons/dist/octicon/x-16.js"
         }
       }
@@ -95,7 +93,6 @@
     <script type="module" blocking="render" src="/deps/@jaimestill/spike-html-apps-foundation/dist/keys.js"></script>
     <script type="module">
       import "/dist/drawer.js";
-      import "/dist/page-header.js";
       import "/dist/site-index.js";
       import "/dist/site-nav.js";
 
@@ -108,7 +105,7 @@
       drawer.addEventListener("open", expanded);
       drawer.addEventListener("close", expanded);
 
-      const tags = ["sl-drawer", "sl-page-header", "sl-site-index", "sl-site-nav"];
+      const tags = ["sl-drawer", "sl-site-index", "sl-site-nav"];
       window.ready = Promise.all(
         tags.map((tag) =>
           customElements.whenDefined(tag).then(() => document.querySelector(tag).updateComplete),
@@ -169,10 +166,7 @@
     </div>
     <main>
       <h1>Empty front matter</h1>
-      <sl-page-header>
-        <dl></dl>
-      </sl-page-header>
-      <p>The architecture stand-in's fixture page: the site nav above links each site the components list, the site index beside links each page of this site, and the page header holds this page's front matter.</p>
+      <p>The architecture stand-in's fixture page: the site nav above links each site the components list and the site index beside links each page of this site.</p>
       <p>Its text says nothing in particular: it is here to be the page's body, read with or without script.</p>
     </main>
     <sl-theme-menu id="theme"></sl-theme-menu>

@@ -10,13 +10,15 @@
 // covering the viewport edge to edge, its header in view while its content scrolls, the page
 // behind inert and focus inside, closed by its Close button, Escape, close(), toggle(), or open,
 // focus returned to the opener; the Close button showing the x-16 glyph alone, named Close and the
-// label by its visually hidden text, which its slot replaces; open and close sent once each,
-// bubbling and composed, never on a mode switch or on removal, which closes it, a drawer put back
-// closed and opening modally again; a switch in either
-// direction, by the viewport or by dock, keeping the very same slotted elements, never
-// disconnected, and what was typed and counted in them; the slide's transition, absent under
-// reduced motion and on a switch; and the slide from the inline-start edge, the left, or the right
-// in a right-to-left page.
+// label by its visually hidden text, which its slot replaces; the Close button a glyph button
+// whose interest hint, shown on hover and on its keyboard focus, is its name, Escape with it shown
+// hiding it as it closes the drawer, the slot's replacement and a changed label followed, the name
+// announced once with no description; open and close sent once each, bubbling and composed, never
+// on a mode switch or on removal, which closes it, a drawer put back closed and opening modally
+// again; a switch in either direction, by the viewport or by dock,
+// keeping the very same slotted elements, never disconnected, and what was typed and counted in
+// them; the slide's transition, absent under reduced motion and on a switch; and the slide from
+// the inline-start edge, the left, or the right in a right-to-left page.
 // Adapted from spike-html-apps-components (51d2b92): test/browser/drawer.test.ts, on its own
 // fixture page, its focus outline case over a slotted list of links, as a site index's, in place
 // of the upload dropzone and the document list.
@@ -31,6 +33,17 @@ import type { Server } from "@jaimestill/spike-html-apps-tooling/server.js";
 
 import x from "@jaimestill/spike-html-hosting-icons/octicon/x-16";
 
+import {
+  assertGlyphButton,
+  assertTarget,
+  CLOSE_NAME,
+  descriptions,
+  glyphButton,
+  hintShown,
+  hover,
+  pointAway,
+  untilHint,
+} from "./support/glyph-button.ts";
 import { assertGlyph, exposed, glyph, type AXNode } from "./support/glyphs.ts";
 import { served } from "./support/served.ts";
 
@@ -661,6 +674,107 @@ describe("drawer", { timeout: 60_000 }, () => {
     assert.deepEqual([box, clip], [[1, 1], "inset(50%)"]);
     assertGlyph(await glyph(page, CLOSE, x), "Close");
   });
+
+  for (const [what, extra, name] of [
+    ["its default text", "", "Close Documents"],
+    [
+      "a replacement through its close slot",
+      '<span slot="close">Fermer</span>',
+      "Fermer Documents",
+    ],
+  ]) {
+    test(`the Close button is a glyph button whose hint, by interestfor, is its name, with ${what}, announced once`, async () => {
+      await mount(NARROW, {}, extra);
+      await openByKeyboard();
+      const shown = await glyphButton(page, CLOSE, CLOSE_NAME);
+      assert.equal(shown.label, name);
+      assertGlyphButton(shown, "Close");
+      assertTarget(shown, "Close");
+      // Chromium would make the hint's text the description; the name is announced once.
+      assert.deepEqual(await descriptions(page, name), [""], "no description");
+    });
+  }
+
+  test("the Close button's hint follows a changed label and a close slot filled after it opens", async () => {
+    await mount(NARROW);
+    await openByKeyboard();
+    await page.evaluate(`(async () => {
+      const drawer = document.querySelector("sl-drawer");
+      drawer.label = "Pages";
+      const text = document.createElement("span");
+      text.slot = "close";
+      text.textContent = "Fermer";
+      drawer.append(text);
+      await new Promise((resolve) => setTimeout(resolve));
+      await drawer.updateComplete;
+    })()`);
+    const shown = await glyphButton(page, CLOSE, CLOSE_NAME);
+    assert.deepEqual([shown.label, shown.hint], ["Fermer Pages", "Fermer Pages"]);
+    assert.ok((await exposed(page, "button")).includes("Fermer Pages"), "the button's name");
+  });
+
+  test("keyboard focus on the Close button, as the drawer opens, shows its hint beside it", async () => {
+    await mount(NARROW);
+    await openByKeyboard();
+    await until(page, `document.querySelector("sl-drawer").shadowRoot.activeElement === ${CLOSE}`);
+    await untilHint(page, CLOSE, true);
+    const shown = await hintShown(page, CLOSE);
+    assert.ok(shown.open && (shown.below || shown.above) && shown.overlaps, JSON.stringify(shown));
+  });
+
+  // The drawer opened by the keyboard, focus moved on to the filter field and the mouse off the
+  // Close button, so its hint is closed, then the Close button hovered.
+  const hoverClose = async () => {
+    await openByKeyboard();
+    await page.evaluate(`document.querySelector("#filter").focus()`);
+    await pointAway(page);
+    await untilHint(page, CLOSE, false);
+    await hover(page, CLOSE);
+  };
+
+  test("hovering the Close button, focus elsewhere, shows its hint beside it after the interest delay", async () => {
+    await mount(NARROW);
+    await hoverClose();
+    await untilHint(page, CLOSE, true);
+    const shown = await hintShown(page, CLOSE);
+    assert.ok(shown.open && (shown.below || shown.above) && shown.overlaps, JSON.stringify(shown));
+    assert.equal((await read()).focused, "filter", "the hint shows with focus elsewhere");
+  });
+
+  // Escape with the hint shown, in the modal drawer, goes to the dialog: it cancels and closes,
+  // and the hint, inside it, closes with it, in the one press, as Chromium orders them. A popover's
+  // toggle event is queued as a task, not dispatched as its state changes: the listeners go on a
+  // task after the hint shows, so its opening toggle has fired, and the order is read only once
+  // the closing toggle is in it, not once :popover-open is false, which can come first.
+  for (const [how, show] of [
+    ["hovering it", hoverClose],
+    ["keyboard focus on it", openByKeyboard],
+  ] as const) {
+    test(`Escape with the Close button's hint shown by ${how} hides the hint and closes the drawer in one press`, async () => {
+      await mount(NARROW);
+      await show();
+      await untilHint(page, CLOSE, true);
+      await page.evaluate(`(() => {
+        window.order = [];
+        const dialog = document.querySelector("sl-drawer").shadowRoot.querySelector("dialog");
+        for (const type of ["cancel", "close"]) {
+          dialog.addEventListener(type, () => window.order.push(type));
+        }
+        (${CLOSE}).interestForElement.addEventListener("toggle", (event) =>
+          window.order.push("hint " + event.newState));
+      })()`);
+      await page.evaluate(`new Promise((resolve) => setTimeout(resolve)).then(() => {
+        window.order = [];
+      })`);
+      await press("Escape", 27);
+      await closedHeard(1);
+      await untilHint(page, CLOSE, false);
+      await until(page, `window.order.includes("hint closed")`);
+      assert.deepEqual(await page.evaluate("window.order"), ["cancel", "close", "hint closed"]);
+      const shown = await read();
+      assert.deepEqual([shown.open, shown.dialogOpen, shown.focused], [false, false, "opener"]);
+    });
+  }
 
   test("Escape closes it, focus returns to the opener, and close goes out once", async () => {
     await mount(NARROW);

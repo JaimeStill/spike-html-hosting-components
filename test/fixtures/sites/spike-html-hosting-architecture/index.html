@@ -1,12 +1,11 @@
 <!doctype html>
 <!-- The architecture fixture site's index page, served at /spike-html-hosting-architecture/ as
      GitHub Pages serves the project site: a page as the SDK's shell and renderer make it, with the
-     three site components and sl-drawer. sl-site-nav, the Pages button, and the Theme button head
+     two site components and sl-drawer. sl-site-nav, the Pages button, and the Theme button head
      the page; sl-site-index slots the site's pages nested by directory, principles/ with an index
      page and conventions/ without one, inside <sl-drawer label="Pages">, docked beside the article
      at 48rem and wider and a modal dialog below it, which the Pages button, shown only there,
-     opens, as P does through the keys module's data-keys="p", as the Theme button's T; and
-     sl-page-header slots the page's front matter, two of its values markup escaped as text. Only
+     opens, as P does through the keys module's data-keys="p", as the Theme button's T. Only
      this page, principles/plain-web.html, and notes/empty.html exist: the index's other links are
      listed and never followed.
      The page loads the foundation as the sites load it: page-full.css, then register-full.js,
@@ -101,8 +100,6 @@
           "@lit/reactive-element": "/deps/@lit/reactive-element/reactive-element.js",
           "@lit/reactive-element/": "/deps/@lit/reactive-element/",
           "@jaimestill/spike-html-apps-foundation/": "/deps/@jaimestill/spike-html-apps-foundation/dist/",
-          "@jaimestill/spike-html-hosting-icons/octicon/arrow-down-16": "/deps/@jaimestill/spike-html-hosting-icons/dist/octicon/arrow-down-16.js",
-          "@jaimestill/spike-html-hosting-icons/octicon/arrow-up-16": "/deps/@jaimestill/spike-html-hosting-icons/dist/octicon/arrow-up-16.js",
           "@jaimestill/spike-html-hosting-icons/octicon/x-16": "/deps/@jaimestill/spike-html-hosting-icons/dist/octicon/x-16.js"
         }
       }
@@ -112,7 +109,6 @@
     <script type="module" blocking="render" src="/deps/@jaimestill/spike-html-apps-foundation/dist/keys.js"></script>
     <script type="module">
       import "/dist/drawer.js";
-      import "/dist/page-header.js";
       import "/dist/site-index.js";
       import "/dist/site-nav.js";
 
@@ -125,7 +121,7 @@
       drawer.addEventListener("open", expanded);
       drawer.addEventListener("close", expanded);
 
-      const tags = ["sl-drawer", "sl-page-header", "sl-site-index", "sl-site-nav"];
+      const tags = ["sl-drawer", "sl-site-index", "sl-site-nav"];
       window.ready = Promise.all(
         tags.map((tag) =>
           customElements.whenDefined(tag).then(() => document.querySelector(tag).updateComplete),
@@ -186,21 +182,7 @@
     </div>
     <main>
       <h1>The architecture stand-in</h1>
-      <sl-page-header>
-        <dl>
-          <dt>title</dt>
-          <dd>The architecture stand-in</dd>
-          <dt>status</dt>
-          <dd>draft</dd>
-          <dt>summary</dt>
-          <dd>&lt;script&gt;alert("front matter")&lt;/script&gt; is text, never markup</dd>
-          <dt>owner</dt>
-          <dd>Research &amp; Standards</dd>
-          <dt>a-front-matter-key-long-enough-to-wrap</dt>
-          <dd>https://jaimestill.github.io/spike-html-hosting-architecture/a/path/long/enough/that/it/must/wrap/at/narrow/widths.html</dd>
-        </dl>
-      </sl-page-header>
-      <p>The architecture stand-in's fixture page: the site nav above links each site the components list, the site index beside links each page of this site, and the page header holds this page's front matter.</p>
+      <p>The architecture stand-in's fixture page: the site nav above links each site the components list and the site index beside links each page of this site.</p>
       <p>Its text says nothing in particular: it is here to be the page's body, read with or without script.</p>
     </main>
     <sl-theme-menu id="theme"></sl-theme-menu>
