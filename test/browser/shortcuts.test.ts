@@ -1,7 +1,7 @@
 // sl-shortcuts from this repository's dist/, on test/fixtures/shortcuts.html, through its public
 // seam alone: the help dialog that holds it and the foundation's keys module. Opened, the dialog
 // lists exactly the bindings bindings() gives with it closed, in its order: the Help button's ?,
-// the Search button's Control+K, the link's G then E, the section tree's H and L, which its
+// the Search button's Control+K, the link's G then E, the section tree's J and K, which its
 // register() binds, and the page's own Alt+N, each key in a kbd, each action the binding's name as
 // plain text, and no Escape row; the dialog's own Close, bound to ? inside it, is left out. Nothing
 // in the shadow root takes focus, so the dialog opened puts focus on its Close. With character
@@ -39,8 +39,8 @@ const ROWS = [
   { keys: "?", action: "Help", off: false },
   { keys: "Control+K", action: "Search", off: false },
   { keys: "G then E", action: "End", off: false },
-  { keys: "H", action: "Previous section", off: false },
-  { keys: "L", action: "Next section", off: false },
+  { keys: "J", action: "Next section", off: false },
+  { keys: "K", action: "Previous section", off: false },
   { keys: "Alt+N", action: "New note", off: false },
 ];
 

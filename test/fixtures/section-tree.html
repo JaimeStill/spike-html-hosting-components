@@ -38,21 +38,15 @@
     <link rel="stylesheet" href="/deps/@jaimestill/spike-html-apps-foundation/dist/page-full.css" />
     <style>
       /* The fixture's page layout, which is the page's and not the element's: the tree beside the
-         article at the tree's default dock, 70rem, and wider, held in view as the article scrolls.
-         Below it the tree is its sticky bar, above the article: the aside is display: contents
-         there, so the bar's containing block is the body and it sticks the page's whole length.
-         The mark on the link of the section in view is the page's paint too. */
+         article at 70rem and wider, held in view as the article scrolls, and above the article
+         below it, where a site would place it in a drawer. The mark on the link of the section in
+         view is the element's own paint, so the page styles no link. */
       body {
         display: grid;
         /* One column, which the wide region's table never widens. */
         grid-template-columns: minmax(0, 1fr);
         gap: var(--space-l);
         padding: var(--space-m);
-      }
-      @media (width < 70rem) {
-        aside {
-          display: contents;
-        }
       }
       @media (width >= 70rem) {
         body {
@@ -68,9 +62,6 @@
           max-block-size: calc(100svh - 2 * var(--space-m));
           overflow-y: auto;
         }
-      }
-      sl-section-tree a[aria-current] {
-        font-weight: 600;
       }
       /* A region that scrolls sideways, around a table wider than it. */
       .wide {
@@ -91,8 +82,6 @@
           "@lit/reactive-element": "/deps/@lit/reactive-element/reactive-element.js",
           "@lit/reactive-element/": "/deps/@lit/reactive-element/",
           "@jaimestill/spike-html-apps-foundation/": "/deps/@jaimestill/spike-html-apps-foundation/dist/",
-          "@jaimestill/spike-html-hosting-icons/octicon/arrow-down-16": "/deps/@jaimestill/spike-html-hosting-icons/dist/octicon/arrow-down-16.js",
-          "@jaimestill/spike-html-hosting-icons/octicon/arrow-up-16": "/deps/@jaimestill/spike-html-hosting-icons/dist/octicon/arrow-up-16.js",
           "@jaimestill/spike-html-hosting-icons/octicon/x-16": "/deps/@jaimestill/spike-html-hosting-icons/dist/octicon/x-16.js"
         }
       }
@@ -136,11 +125,11 @@
           <li>
             <a href="#keys">Keys</a>
             <ul>
-              <li><a href="#h-and-l">H and L</a></li>
+              <li><a href="#j-and-k">J and K</a></li>
               <li><a href="#the-off-switch">The off switch</a></li>
             </ul>
           </li>
-          <li><a href="#reading-progress">Reading progress</a></li>
+          <li><a href="#the-current-section">The current section</a></li>
           <li>
             <a href="#caf%C3%A9-and-cr%C3%A8me">Café and crème</a>
             <ul>
@@ -195,7 +184,7 @@
         <p>The section tree's fixture text runs long enough that every section takes more than a screen, so the reading line meets each heading in turn as the page scrolls. It says nothing in particular: it is here to be scrolled past, at a wide and a narrow width, in every profile and scheme.</p>
         <p>The section tree's fixture text runs long enough that every section takes more than a screen, so the reading line meets each heading in turn as the page scrolls. It says nothing in particular: it is here to be scrolled past, at a wide and a narrow width, in every profile and scheme.</p>
         <p>The section tree's fixture text runs long enough that every section takes more than a screen, so the reading line meets each heading in turn as the page scrolls. It says nothing in particular: it is here to be scrolled past, at a wide and a narrow width, in every profile and scheme.</p>
-        <h3 id="h-and-l">H and L</h3>
+        <h3 id="j-and-k">J and K</h3>
         <p>The section tree's fixture text runs long enough that every section takes more than a screen, so the reading line meets each heading in turn as the page scrolls. It says nothing in particular: it is here to be scrolled past, at a wide and a narrow width, in every profile and scheme.</p>
         <div id="wide" role="region" aria-label="A wide table" tabindex="0" class="wide">
           <table>
@@ -210,7 +199,7 @@
         <p>The section tree's fixture text runs long enough that every section takes more than a screen, so the reading line meets each heading in turn as the page scrolls. It says nothing in particular: it is here to be scrolled past, at a wide and a narrow width, in every profile and scheme.</p>
       </section>
       <section>
-        <h2 id="reading-progress">Reading progress</h2>
+        <h2 id="the-current-section">The current section</h2>
         <p>The section tree's fixture text runs long enough that every section takes more than a screen, so the reading line meets each heading in turn as the page scrolls. It says nothing in particular: it is here to be scrolled past, at a wide and a narrow width, in every profile and scheme.</p>
         <p>The section tree's fixture text runs long enough that every section takes more than a screen, so the reading line meets each heading in turn as the page scrolls. It says nothing in particular: it is here to be scrolled past, at a wide and a narrow width, in every profile and scheme.</p>
         <p>The section tree's fixture text runs long enough that every section takes more than a screen, so the reading line meets each heading in turn as the page scrolls. It says nothing in particular: it is here to be scrolled past, at a wide and a narrow width, in every profile and scheme.</p>

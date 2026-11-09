@@ -1,24 +1,21 @@
-// sl-page-header, sl-site-index, sl-site-nav, and sl-drawer from this repository's dist/, on the
-// fixture sites under test/fixtures/sites/, each served at its own base on one origin, through
-// their public seams alone. With no script the front matter and the site index render, wide and
-// narrow, the Pages button hidden, and the page reads without the site nav; the site index sits in
-// the Pages drawer, docked beside the article wide, and narrow a modal dialog the Pages button or
-// P opens, which Escape or its Close button closes, focus back on the button; no navigation text
-// breaks inside a word, whatever the page inherits; the header slots the front matter as a grid
-// of terms beside their values, in source order and as text, and an empty or absent dl renders
-// nothing; the index marks the page on screen, a directory labeled by its index page or its name;
-// the nav lists the components' sites and marks the current one by the path's first segment;
-// with one site deployed ahead, on a release that lists a fourth site, the ahead site's nav lists
-// four and the one behind three, neither requesting a list, until each nav's src names the org's
-// list and both list its four: the built list painted first, the fetched one replacing it, an
-// error status, a malformed list, or a fetch that fails at the network level leaving the built
-// one, and a response for an older src dropped;
-// every component renders in every profile the foundation's full entry registers, light and dark,
-// at 1280 and 390 px, with no sideways scroll and its focus drawn, and at 390 px the drawer open
-// as a modal dialog the same, its Close button's x-16 glyph drawn, a glyph button at least 24 px
-// a side whose hint is its name; and the theme saved through the
-// menu on one site applies before first paint on the other, a palette the other doesn't register
-// falling back to its default and staying stored.
+// sl-site-index, sl-site-nav, and sl-drawer from this repository's dist/, on the fixture sites
+// under test/fixtures/sites/, each served at its own base on one origin, through their public
+// seams alone. With no script the site index renders, wide and narrow, the Pages button hidden,
+// and the page reads without the site nav; the site index sits in the Pages drawer, docked beside
+// the article wide, and narrow a modal dialog the Pages button or P opens, which Escape or its
+// Close button closes, focus back on the button; no navigation text breaks inside a word,
+// whatever the page inherits; the index marks the page on screen, a directory labeled by its
+// index page or its name; the nav lists the components' sites and marks the current one by the
+// path's first segment; with one site deployed ahead, on a release that lists a fourth site, the
+// ahead site's nav lists four and the one behind three, neither requesting a list, until each
+// nav's src names the org's list and both list its four: the built list painted first, the
+// fetched one replacing it, an error status, a malformed list, or a fetch that fails at the
+// network level leaving the built one, and a response for an older src dropped; every component
+// renders in every profile the foundation's full entry registers, light and dark, at 1280 and 390
+// px, with no sideways scroll and its focus drawn, and at 390 px the drawer open as a modal dialog
+// the same, its Close button's x-16 glyph drawn, a glyph button at least 24 px a side whose hint
+// is its name; and the theme saved through the menu on one site applies before first paint on the
+// other, a palette the other doesn't register falling back to its default and staying stored.
 
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
@@ -52,18 +49,6 @@ const PAGES = {
   empty: `${ARCHITECTURE}notes/empty.html`,
 };
 
-/** The front matter the index page's header holds, in source order, as its text reads. */
-const FRONT_MATTER = [
-  ["title", "The architecture stand-in"],
-  ["status", "draft"],
-  ["summary", `<script>alert("front matter")</script> is text, never markup`],
-  ["owner", "Research & Standards"],
-  [
-    "a-front-matter-key-long-enough-to-wrap",
-    "https://jaimestill.github.io/spike-html-hosting-architecture/a/path/long/enough/that/it/must/wrap/at/narrow/widths.html",
-  ],
-];
-
 /** The sites the nav lists, in order: the link's text and its href as written. */
 const SITES = [
   ["Org", "/spike-html-hosting/"],
@@ -94,9 +79,6 @@ const KEY = "spike-html-apps-foundation.preferences";
 
 /** A component's shadow root, in a page expression. */
 const shadow = (tag: string) => `document.querySelector("${tag}").shadowRoot`;
-
-/** The header's terms and values, in source order, in a page expression. */
-const PAIRS = `[...document.querySelectorAll("sl-page-header dl > :is(dt, dd)")]`;
 
 /** The site index's links, in a page expression. */
 const INDEX_LINKS = `[...document.querySelectorAll("sl-site-index a")]`;
@@ -184,27 +166,6 @@ describe("the site components", { timeout: 180_000 }, () => {
     });
     after(() => page.cdp("Emulation.setScriptExecutionDisabled", { value: false }));
 
-    test("the front matter renders as the page's dl, in source order and as text", async () => {
-      const shown: { defined: boolean; pairs: string[][]; seen: boolean[]; markup: number } =
-        await page.evaluate(`(() => {
-          const items = ${PAIRS};
-          const pairs = [];
-          for (let i = 0; i < items.length; i += 2) {
-            pairs.push([items[i].textContent, items[i + 1].textContent]);
-          }
-          return {
-            defined: customElements.get("sl-page-header") !== undefined,
-            pairs,
-            seen: items.map((el) => el.getBoundingClientRect().height > 0),
-            markup: document.querySelectorAll("sl-page-header dl *:not(dt, dd)").length,
-          };
-        })()`);
-      assert.equal(shown.defined, false, "no script defined the element");
-      assert.deepEqual(shown.pairs, FRONT_MATTER);
-      assert.ok(shown.seen.every(Boolean), "every term and value is shown");
-      assert.equal(shown.markup, 0, "no value parsed as markup");
-    });
-
     test("the site index renders, every link and directory label shown, and no Pages button, wide and narrow", async () => {
       for (const width of [1280, 390]) {
         await resize(page, width);
@@ -233,60 +194,6 @@ describe("the site components", { timeout: 180_000 }, () => {
         main: document.querySelector("main p").getBoundingClientRect().height > 0,
       })`);
       assert.deepEqual(shown, { nav: 0, main: true });
-    });
-  });
-
-  describe("sl-page-header", () => {
-    test("slots the dl as a grid, each term beside its value, in source order and as text", async () => {
-      await load(PAGES.index);
-      const shown: {
-        errors: string[];
-        slotted: string[];
-        display: string;
-        pairs: string[][];
-        rows: { level: boolean; beside: boolean }[];
-      } = await page.evaluate(`(() => {
-        const items = ${PAIRS};
-        const pairs = [];
-        const rows = [];
-        for (let i = 0; i < items.length; i += 2) {
-          pairs.push([items[i].textContent, items[i + 1].textContent]);
-          const term = items[i].getBoundingClientRect();
-          const value = items[i + 1].getBoundingClientRect();
-          // The items align on their baselines, so a term's box, its margin aside, is level with
-          // its value's.
-          rows.push({
-            level: Math.abs(term.top - value.top) <= 1,
-            beside: value.left >= term.right,
-          });
-        }
-        return {
-          errors: window.errors,
-          slotted: ${shadow("sl-page-header")}.querySelector("slot").assignedElements().map((el) => el.localName),
-          display: getComputedStyle(document.querySelector("sl-page-header dl")).display,
-          pairs,
-          rows,
-        };
-      })()`);
-      assert.deepEqual(shown.errors, []);
-      assert.deepEqual(shown.slotted, ["dl"]);
-      assert.equal(shown.display, "grid");
-      assert.deepEqual(shown.pairs, FRONT_MATTER);
-      for (const [i, row] of shown.rows.entries()) {
-        assert.deepEqual(row, { level: true, beside: true }, FRONT_MATTER[i][0]);
-      }
-    });
-
-    test("an empty dl and an absent one render nothing", async () => {
-      for (const path of [PAGES.empty, PAGES.plain]) {
-        await load(path);
-        const shown: { errors: string[]; height: number; terms: number } = await page.evaluate(`({
-          errors: window.errors,
-          height: document.querySelector("sl-page-header").getBoundingClientRect().height,
-          terms: document.querySelectorAll("sl-page-header dt").length,
-        })`);
-        assert.deepEqual(shown, { errors: [], height: 0, terms: 0 }, path);
-      }
     });
   });
 
@@ -708,7 +615,7 @@ describe("the site components", { timeout: 180_000 }, () => {
         } = await page.evaluate(`(() => {
           const boxes = {};
           // Narrow, the site index is in the closed drawer, and the Pages button is in its place.
-          const tags = ["sl-page-header", ${width} < ${DOCK} ? ".pages-opener" : "sl-site-index", "sl-site-nav"];
+          const tags = [${width} < ${DOCK} ? ".pages-opener" : "sl-site-index", "sl-site-nav"];
           for (const tag of tags) {
             const box = document.querySelector(tag).getBoundingClientRect();
             boxes[tag] = { left: box.left, right: box.right, height: box.height };
@@ -731,7 +638,7 @@ describe("the site components", { timeout: 180_000 }, () => {
 
         // The keyboard reaches the site nav's three links, then wide the Theme button and the site
         // index's first link, and narrow the Pages and the Theme buttons; each draws its focus
-        // outline. The page header holds nothing to focus.
+        // outline.
         const focused: { name: string; visible: boolean; outline: string }[] = [];
         for (let i = 0; i < 5; i++) {
           await tab(page);

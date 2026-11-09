@@ -1,10 +1,10 @@
 # spike-html-hosting-components
 
-The documentation components layer of spike-html-hosting: seven Lit elements with shadow roots,
+The documentation components layer of spike-html-hosting: six Lit elements with shadow roots,
 their sheets, and the glyph button's sheet, that the spike's GitHub Pages sites build their pages
-from, the section tree, the page header, the site index, the nav between the sites, the drawer
-that holds the site index where its column doesn't fit, the list of the page's keyboard
-shortcuts in its Help dialog, and the reader's settings in its Settings dialog. It is ES modules
+from, the section tree, the site index, the nav between the sites, the drawer that holds the
+site index where its column doesn't fit, the list of the page's keyboard shortcuts in its Help
+dialog, and the reader's settings in its Settings dialog. It is ES modules
 with their type declarations and stylesheets, built on
 [spike-html-apps-foundation](https://github.com/JaimeStill/spike-html-apps-foundation) and drawing
 its glyphs from [spike-html-hosting-icons](https://github.com/JaimeStill/spike-html-hosting-icons),
@@ -42,7 +42,6 @@ parses every module under `node_modules/@jaimestill/`, rewrites each sheet to a 
 ```js
 import "@jaimestill/spike-html-hosting-components/site-nav.js";
 import "@jaimestill/spike-html-hosting-components/site-index.js";
-import "@jaimestill/spike-html-hosting-components/page-header.js";
 import "@jaimestill/spike-html-hosting-components/section-tree.js";
 import "@jaimestill/spike-html-hosting-components/drawer.js";
 import "@jaimestill/spike-html-hosting-components/shortcuts.js";
@@ -50,16 +49,19 @@ import "@jaimestill/spike-html-hosting-components/settings.js";
 ```
 
 - `./<name>.js`, with its `./<name>.d.ts`: each element's module, which exports its `tagName`.
-- `./<name>.css`: each element's sheet, which its module imports itself.
-- `./glyph-button.css`: the glyph button's sheet, which the section tree and the drawer adopt in
-  their shadow roots and a page links for its own; see [Glyph buttons](#glyph-buttons).
+- `./<name>.css`: each element's sheet, which its module imports itself, and
+  `./section-tree-links.css`, the section tree's sheet for its slotted links, which its module
+  imports and adopts into the page.
+- `./glyph-button.css`: the glyph button's sheet, which the drawer adopts in its shadow root and
+  a page links for its own; see [Glyph buttons](#glyph-buttons).
 
 Every element but the site nav, the shortcuts list, and the settings slots light-DOM markup the
 page writes, so with no script that markup renders as the page's own and every link still goes
 where it says.
 Where an element marks a slotted link with `aria-current`, the mark is an attribute on the
-light-DOM link, which a shadow sheet can't reach below the slot's top level, so its look is the
-page's to style, for example `sl-section-tree a[aria-current]` and `sl-site-index a[aria-current]`.
+light-DOM link, which a shadow sheet can't reach below the slot's top level. The site index leaves
+its look to the page, for example `sl-site-index a[aria-current]`; the section tree draws its own,
+through a sheet it adopts into the page (see [`sl-section-tree`](#sl-section-tree)).
 
 ### Glyph buttons
 
@@ -238,81 +240,50 @@ GitHub's heading id, with a nested `ul` or `ol` for the `h3`s under it:
 
 - A link whose fragment names no element on the page stays a plain link and no section of the
   tree.
+- The tree is its links alone: the shadow root holds the nav landmark around the slot and
+  nothing else.
 - The link of the section in view carries `aria-current="location"`: the last section whose
   heading has reached the reading line, a third of the way down the viewport. At the top of the
   page, scrolled to 0, and before the first heading reaches the line, no link is marked: the top
   is a stop of its own.
-- H and L move to the previous and the next stop, the page's top then each section, and wrap: L
-  from the top goes to the first section and past the last back to the top; H from the top goes
+- The current link is marked by an accent rule at its inline start and bold text. The mark is an
+  attribute on the light-DOM link, which the element's shadow sheet can't reach, so the element
+  adopts `section-tree-links.css` into the document, or the shadow root it sits in, once, as it
+  connects: every link of the tree is a block with a transparent inline-start rule `--space-3xs`
+  wide and `--space-2xs` before its text, and the current one draws the rule in `--accent-color`
+  (by default `--magenta`) and its text at weight 600. Every link keeps the rule's width, so the
+  mark moves no text. The sheet is unlayered, above the foundation's layers; a page restyles the
+  links with selectors at least as specific, such as `sl-section-tree a[aria-current]`.
+- J and K move to the next and the previous stop, the page's top then each section, and wrap: J
+  from the top goes to the first section and past the last back to the top; K from the top goes
   to the last section and from the first to the top. A move to a section scrolls its heading to
-  the top of the viewport, and one to the top scrolls the page to 0. Each move counts from the
-  stop the last one reached, which stays marked while the page rests where the move left it, even
-  a short section whose next heading is already past the reading line, or the last section, which
-  the page can't scroll to the line. A link followed to a section the tree lists reaches it as a
-  move would: a click or Enter on one of the tree's own links, and any change of the URL's
-  fragment to a listed heading's id, by a link elsewhere on the page, a script, or the history,
-  make that section the held stop, while the link's navigation and scroll, with `:target` and its
-  scroll margin, stay the browser's. A page loaded with a fragment holds no stop. Once the reader
-  scrolls by other means, the mark follows the reading line again and the next move counts from
-  the section in view. H and L are bound by `register()` in the foundation's keys module, so
-  [`sl-shortcuts`](#sl-shortcuts) lists them as "Previous section" and "Next section", and the
-  character-key switch of [`sl-settings`](#sl-settings) turns them off. Every arrow key stays the
-  browser's own scrolling, in the page and in any region that scrolls sideways. The Previous and
-  Next buttons show Octicons' `arrow-up-16` and `arrow-down-16` with the key hints H and L, each in
-  a `<kbd>`, and are named "Previous" and "Next" by their `aria-label`. They are
-  [glyph buttons](#glyph-buttons), each showing its name in its hint on hover and keyboard focus.
-  They move the same way whatever the setting, are disabled only when the tree names no section,
-  and carry `aria-keyshortcuts` while the keys are on. A move scrolls smoothly unless the reader
-  asks for reduced motion; its scroll ends at its `scrollend`, or, in an engine that fires none, as
-  Safari may, once the page has stood still for five frames, or after three seconds at most,
-  whichever comes first.
-- `dock`, a CSS length, `70rem` by default (exported as `DOCK`), is the width at which the tree is
-  a column, and wider: where one 16rem side column fits beside a reading column of 80ch in the
-  foundation's default mono type. A site whose layout docks the column elsewhere sets its own,
-  for example `<sl-section-tree dock="88rem">`. It is read in the media query `(width < <dock>)`,
-  as `sl-drawer` reads its own: a viewport of exactly `dock` is a column, and a length the query
-  can't read leaves the tree a column at every width. The mode is a custom state, `docked` or
-  `bar`, which a page may style as `sl-section-tree:state(bar)`.
-- Below `dock` the tree is a bar stuck to the top of the viewport, on the page's background,
-  holding the reading progress and the Previous and Next buttons alone, its links hidden. The bar
-  sticks within the element's containing block, so the page places the element, or a wrapper of
-  `display: contents` at those widths, in the page's own flow before `main`, not in a wrapper
-  only as tall as the tree. While it is the bar the element sets the root's
-  `scroll-padding-block-start`, inline, to the bar's block size, so a heading a move or a link
-  scrolls to lands below the bar, and puts back the root's own inline value as it leaves the bar
-  or the page.
+  the top of the viewport, and one to the top scrolls the page to 0, and the section a move
+  reaches carries `aria-current`. Each move counts from the stop the last one reached, which stays
+  marked while the page rests where the move left it, even a short section whose next heading is
+  already past the reading line, or the last section, which the page can't scroll to the line. A
+  link followed to a section the tree lists reaches it as a move would: a click or Enter on one of
+  the tree's own links, and any change of the URL's fragment to a listed heading's id, by a link
+  elsewhere on the page, a script, or the history, make that section the held stop, while the
+  link's navigation and scroll, with `:target` and its scroll margin, stay the browser's. A page
+  loaded with a fragment holds no stop. Once the reader scrolls by other means, the mark follows
+  the reading line again and the next move counts from the section in view. J and K are bound by
+  `register()` in the foundation's keys module, so [`sl-shortcuts`](#sl-shortcuts) lists them as
+  "Next section" and "Previous section", and the character-key switch of
+  [`sl-settings`](#sl-settings) turns them off. No control carries them, so the tree writes no
+  `aria-keyshortcuts`. Every arrow key stays the browser's own scrolling, in the page and in any
+  region that scrolls sideways. A move scrolls smoothly unless the reader asks for reduced motion;
+  its scroll ends at its `scrollend`, or, in an engine that fires none, as Safari may, once the
+  page has stood still for five frames, or after three seconds at most, whichever comes first.
+- The tree has one layout at every width, a column of its links, and takes no `dock`: the page
+  docks it. Where the page's layout has room for a side column, the page places the tree in it;
+  below that width it places the tree in a drawer, as
+  [spike-html-hosting-sdk](https://github.com/JaimeStill/spike-html-hosting-sdk) places it in an
+  [`sl-drawer`](#sl-drawer), docked as a column at the drawer's `dock` and a modal dialog below it.
 - Link text never breaks inside a word: the element sets `overflow-wrap` and `word-break` to
   `normal`, so a page's own mid-word breaking, inherited from an ancestor, stops at the tree. A
   word wider than the column overflows it, so the column's minimum width is the page's to give.
-- The reading progress is a bar the page's scroll drives through a CSS scroll timeline, with no
-  script; in an engine without scroll timelines it is absent and nothing else changes.
-- With no script the element is undefined, so the list renders as the page's own at every width
-  and every link jumps to its section; the bar, the buttons, the mark, and the keys are the
-  script's.
-
-### `sl-page-header`
-
-`./page-header.js`: a page's front matter. It takes no attribute. It slots one `dl` of `dt` and
-`dd` pairs, a `dt` for each front matter key and a `dd` for its value, in the order the source
-writes them, and lays them out terms beside values:
-
-```html
-<sl-page-header>
-  <dl>
-    <dt>title</dt>
-    <dd>The architecture stand-in</dd>
-    <dt>status</dt>
-    <dd>draft</dd>
-  </dl>
-</sl-page-header>
-```
-
-- Every key and value is text, escaped where the page is written, so a value that reads as markup
-  shows as the characters it is; the element parses and reorders nothing.
-- A page with no front matter writes an empty `dl`, or none: either renders nothing, the element
-  taking no space.
-- It is no landmark and holds nothing to focus. With no script the list renders as the page's own
-  `dl`.
+- With no script the element is undefined, so the list renders as the page's own and every link
+  jumps to its section; the mark and the keys are the script's.
 
 ### `sl-site-index`
 
@@ -635,8 +606,8 @@ takes no attribute and slots nothing. The dialog, its heading, and its Close are
   between presses, stored at once through the keys module's `changeSettings()`. With character
   keys off, every binding of character keys alone stops firing and loses its `aria-keyshortcuts`.
 - Every change fires a `change` event at the element, bubbling and composed, since a control's
-  own stops at the shadow root: the section tree's `aria-keyshortcuts` and an open shortcuts
-  list follow it in the same tab, as they follow a `storage` event from another tab.
+  own stops at the shadow root: an open shortcuts list follows it in the same tab, as it follows
+  a `storage` event from another tab.
 - It follows another tab's change, the theme and the keyboard settings, at its `storage` event.
   As its dialog opens it reads both again and focuses the first row, unless an element in the
   dialog has `autofocus`.
@@ -666,8 +637,8 @@ mise run currency                     # report every tool, package, and action p
 shortcuts list's page of several bindings in a help dialog, `test/fixtures/settings.html` the
 settings' page, a Settings dialog beside a help dialog and the bindings the settings turn off,
 and `test/fixtures/sites/` holds the fixture sites served at their project sites' paths: the
-architecture stand-in's, with the site nav, the site index in its Pages drawer and opener, and
-the page header; sqlate's, with the site nav as built, a site deployed behind; a fourth site's,
+architecture stand-in's, with the site nav and the site index in its Pages drawer and opener;
+sqlate's, with the site nav as built, a site deployed behind; a fourth site's,
 with a site nav whose `SITES` lists it too, a site deployed ahead; and the org's lists for `src`,
 `sites.json` naming all four. The browser tier runs on them in the pinned chrome-headless-shell,
 and `mise run screenshots` captures them through the `spike-html-apps-screenshots` bin of

@@ -1,9 +1,8 @@
 // mise run screenshots' description, which spike-html-apps-tooling's spike-html-apps-screenshots
 // reads: the section tree's fixture page in its viewport, wide and narrow, at its top, scrolled to
-// a later section, which the tree marks and the progress bar reaches, narrow in its sticky bar,
-// and with the keys help dialog open; the architecture fixture site's index page, at its base,
-// with the site nav, the site index in its Pages drawer, and the page header, wide with the drawer
-// docked, narrow with it closed and open by P, and with its theme menu open; one site deployed
+// a later section, which the tree marks, and with the keys help dialog open; the architecture
+// fixture site's index page, at its base, with the site nav and the site index in its Pages
+// drawer, wide with the drawer docked, narrow with it closed and open by P, and with its theme menu open; one site deployed
 // ahead of another, the fourth fixture site's index page and the sqlate one's, each with its
 // built site nav and with its src naming the org fixture site's list, wide; the profile's
 // facets, palette, space, and type, at flexoki, regular, and mono; --all's profiles, every palette
@@ -28,16 +27,10 @@ const narrow = { width: 390, height: 844 };
 
 /**
  * Scrolls the fourth section's heading to the top, at once, and resolves once the tree marks it.
- * The tree's mode follows the viewport by its media query's change event, a frame after the
- * capture sets the viewport, so the step first waits for the mode the viewport calls for: as the
- * bar, the root's scroll padding lands the heading below it.
  */
 const scrolled: Step = async (page) => {
   await page.evaluate(`(async () => {
     await window.ready;
-    const tree = document.querySelector("sl-section-tree");
-    const mode = () => matchMedia("(width < " + tree.dock + ")").matches ? ":state(bar)" : ":state(docked)";
-    while (!tree.matches(mode())) await new Promise((resolve) => requestAnimationFrame(resolve));
     const link = document.querySelectorAll("sl-section-tree a")[3];
     document.getElementById(decodeURIComponent(link.hash.slice(1)))
       .scrollIntoView({ block: "start", behavior: "instant" });

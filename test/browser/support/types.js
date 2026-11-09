@@ -8,7 +8,6 @@
 /** @import { SectionTree } from "../../../dist/section-tree.js" */
 /** @import { Shortcuts } from "../../../dist/shortcuts.js" */
 /** @import { Settings } from "../../../dist/settings.js" */
-/** @import { PageHeader } from "../../../dist/page-header.js" */
 /** @import { SiteIndex } from "../../../dist/site-index.js" */
 /** @import { Site, SiteNav } from "../../../dist/site-nav.js" */
 
@@ -16,18 +15,10 @@
  * @type {Pick<SectionTree, "label">} */
 export const labelled = { label: "On this page" };
 
-/** A section tree's dock, any CSS length as a string: a narrower `dock` fails here.
- * @type {Pick<SectionTree, "dock">} */
-export const treeDock = { dock: "calc(80ch + 18rem)" };
-
 /** A drawer's label, dock, and open, a plain string, a CSS length, and a boolean: a narrower
  * field fails here.
  * @type {Pick<Drawer, "label" | "dock" | "open">} */
 export const drawer = { label: "Pages", dock: "70rem", open: false };
-
-/** A page header, an element with no property of its own to narrow.
- * @type {PageHeader | null} */
-export const header = null;
 
 /** A site index's label, a plain string: a narrower `label` fails here.
  * @type {Pick<SiteIndex, "label">} */
@@ -52,11 +43,10 @@ export const settings = null;
 /** The tags the modules define, as the tag name map types them: a missing entry fails here.
  * @type {[
  *   HTMLElementTagNameMap["sl-section-tree"] | null,
- *   HTMLElementTagNameMap["sl-page-header"] | null,
  *   HTMLElementTagNameMap["sl-site-index"] | null,
  *   HTMLElementTagNameMap["sl-site-nav"] | null,
  *   HTMLElementTagNameMap["sl-drawer"] | null,
  *   HTMLElementTagNameMap["sl-shortcuts"] | null,
  *   HTMLElementTagNameMap["sl-settings"] | null,
  * ]} */
-export const tags = [null, null, null, null, null, null, null];
+export const tags = [null, null, null, null, null, null];

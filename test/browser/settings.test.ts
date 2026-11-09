@@ -5,14 +5,13 @@
 // arrows, spans hidden from assistive technology and taking no focus, as the foundation menu's,
 // step it, wrapping, and each step applies to the root and is stored at once. On a row, H and L
 // step it and J and K move between the rows, stopping at the ends, and none of them reaches the
-// page: the section tree's H and L never move it while the dialog is open. The preview card shows
+// page: the section tree's J and K never move it while the dialog is open. The preview card shows
 // its heading, link, code, kbd, buttons, field, and striped table, drawn by the foundation's sheets
 // in the shadow root. Another tab's change, at its storage event, updates the root and the rows,
 // and the keyboard settings. The switch and the wait are stored at once and drive the keys module:
-// with character keys off, P, ?, S, H, and L fire nothing and Control+K still does. Flipping the
-// switch in the element updates, in the same tab, the page's aria-keyshortcuts, the section tree's
-// in its shadow root, and an open shortcuts list's rows. The foundation's theme-menu.js is never
-// requested.
+// with character keys off, P, ?, S, J, and K fire nothing and Control+K still does. Flipping the
+// switch in the element updates, in the same tab, the page's aria-keyshortcuts and an open
+// shortcuts list's rows. The foundation's theme-menu.js is never requested.
 
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
@@ -256,18 +255,18 @@ describe("sl-settings", { timeout: 60_000 }, () => {
     await rendered(page);
     assert.deepEqual(await focusedRow(page), { key: "color", value: colors[0] });
     assert.equal((await stored(page))?.color, colors[0]);
-    // Not one of the presses reached the section tree's H and L.
+    // Not one of the presses reached the section tree's J and K.
     const page_: { y: number; marked: number; hash: string } = await page.evaluate(`({
       y: scrollY,
       marked: document.querySelectorAll("sl-section-tree a[aria-current]").length,
       hash: location.hash,
     })`);
     assert.deepEqual(page_, { y: 0, marked: 0, hash: "" }, "the section tree never moved");
-    // Off the rows, on the dialog's Close, L is no page binding while the dialog is open.
+    // Off the rows, on the dialog's Close, J is no page binding while the dialog is open.
     await page.evaluate(`document.querySelector("#settings-close").focus()`);
-    await press(page, "l");
+    await press(page, "j");
     await page.evaluate(SETTLED);
-    assert.equal(await page.evaluate(`scrollY`), 0, "L on the Close moved nothing");
+    assert.equal(await page.evaluate(`scrollY`), 0, "J on the Close moved nothing");
     assert.equal(await page.evaluate(`${SETTINGS}.open`), true);
     assert.deepEqual(await page.evaluate(`window.errors`), []);
   });
@@ -387,13 +386,13 @@ describe("sl-settings", { timeout: 60_000 }, () => {
     await page.evaluate(`${SETTINGS}.close()`);
     await until(page, `!${SETTINGS}.open`);
 
-    // Character keys off: P, ?, S, H, and L fire nothing; Control+K, a combination, stays on.
+    // Character keys off: P, ?, S, J, and K fire nothing; Control+K, a combination, stays on.
     await page.evaluate(`document.activeElement?.blur()`);
     await press(page, "p");
     await press(page, "?");
     await press(page, "s");
-    await press(page, "l");
-    await press(page, "h");
+    await press(page, "j");
+    await press(page, "k");
     await page.evaluate(SETTLED);
     const off: Record<string, unknown> = await page.evaluate(`({
       pages: window.pages, help: ${HELP}.open, settings: ${SETTINGS}.open, y: scrollY,
@@ -424,15 +423,12 @@ describe("sl-settings", { timeout: 60_000 }, () => {
   test("the switch updates, in the same tab, aria-keyshortcuts and an open shortcuts list", async () => {
     const declared = (): Promise<Record<string, string | null>> =>
       page.evaluate(`(() => {
-        const tree = document.querySelector("sl-section-tree").shadowRoot;
         const of = (el) => el.getAttribute("aria-keyshortcuts");
         return {
           pages: of(document.querySelector("#pages")),
           help: of(document.querySelector('[commandfor="help"][command="show-modal"]')),
           settings: of(document.querySelector('[commandfor="settings"][command="show-modal"]')),
           search: of(document.querySelector("#search")),
-          previous: of(tree.querySelector(".previous")),
-          next: of(tree.querySelector(".next")),
         };
       })()`);
     const listed = (): Promise<{ keys: string; off: boolean }[]> =>
@@ -446,8 +442,6 @@ describe("sl-settings", { timeout: 60_000 }, () => {
       help: "Shift+/",
       settings: "S",
       search: "Control+K",
-      previous: "H",
-      next: "L",
     });
 
     // The help dialog open and the switch flipped in the element, its own dialog closed: a modal
@@ -466,31 +460,27 @@ describe("sl-settings", { timeout: 60_000 }, () => {
     await page.evaluate(`document.addEventListener("change",
       (event) => (window.changes ??= []).push(event.target.localName))`);
     await page.evaluate(`${SHADOW}.querySelector("input[type=checkbox]").click()`);
-    await page.evaluate(`Promise.all(["sl-section-tree", "sl-shortcuts"].map((tag) =>
-      document.querySelector(tag).updateComplete))`);
+    await page.evaluate(`document.querySelector("sl-shortcuts").updateComplete`);
     assert.deepEqual(await page.evaluate(`window.changes`), ["sl-settings"]);
     assert.deepEqual(await declared(), {
       pages: null,
       help: null,
       settings: null,
       search: "Control+K",
-      previous: null,
-      next: null,
     });
     assert.deepEqual(await listed(), [
       { keys: "P", off: true },
       { keys: "?", off: true },
       { keys: "S", off: true },
       { keys: "Control", off: false },
-      { keys: "H", off: true },
-      { keys: "L", off: true },
+      { keys: "J", off: true },
+      { keys: "K", off: true },
     ]);
 
     // And back on.
     await page.evaluate(`${SHADOW}.querySelector("input[type=checkbox]").click()`);
-    await page.evaluate(`Promise.all(["sl-section-tree", "sl-shortcuts"].map((tag) =>
-      document.querySelector(tag).updateComplete))`);
-    assert.equal((await declared()).previous, "H");
+    await page.evaluate(`document.querySelector("sl-shortcuts").updateComplete`);
+    assert.equal((await declared()).settings, "S");
     assert.ok(
       (await listed()).every((row) => !row.off),
       "every row on again",
