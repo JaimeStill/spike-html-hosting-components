@@ -1,8 +1,9 @@
 // The shortcuts list, Lit with a shadow root on the foundation's reset and elements sheets: the
 // page's keyboard shortcuts, as the foundation's keys module lists them for the help dialog that
-// holds the element, in a table of each binding's keys and a button that runs it, with the
-// foundation's screen-reader note after it. It holds no settings, and it renders no
-// [data-keys-list], so the keys module never loads its own help module.
+// holds the element, in a table of each binding's keys and its action as plain text, with the
+// foundation's screen-reader note after it. It describes the shortcuts and runs none. It holds no
+// settings, and it renders no [data-keys-list], so the keys module never loads its own help
+// module.
 
 import { html, LitElement, nothing, type PropertyDeclarations, type TemplateResult } from "lit";
 
@@ -93,13 +94,14 @@ function keysOf(sequences: Sequence[]): (string | TemplateResult)[] {
  *   </dialog>
  *
  * The shadow root holds a table of two columns, Keys and Action. A row's keys are each binding's
- * sequences, each key in a kbd as the keys grammar labels it; its action is a button named by the
- * binding, its registered label or its element's name, which closes the dialog and runs the
- * binding as its keys would. A row the reader's setting turns off, one whose every sequence is
- * character keys alone while character keys are off, carries the word "off" after its keys, which
- * is shown and read, and the class off. No row is written that bindings() doesn't give: the
- * foundation's fixed Escape row, which releases a field and is no binding, is left out. The
- * foundation's screen-reader note follows the table.
+ * sequences, each key in a kbd as the keys grammar labels it; its action is the binding's name,
+ * its registered label or its element's name, as plain text. A row is no control: the list only
+ * describes the shortcuts, so nothing in it takes focus, and a dialog whose only other control is
+ * its Close puts focus there natively as it opens. A row the reader's setting turns off, one whose
+ * every sequence is character keys alone while character keys are off, carries the word "off"
+ * after its keys, which is shown and read, and the class off. No row is written that bindings()
+ * doesn't give: the foundation's fixed Escape row, which releases a field and is no binding, is
+ * left out. The foundation's screen-reader note follows the table.
  *
  * The element reads the bindings again as the dialog opens, since they differ with the page's
  * state, and as the reader's settings change: a change event in the document, as a settings form
@@ -158,11 +160,7 @@ export class Shortcuts extends LitElement {
                 <td>
                   ${keysOf(binding.sequences)}${binding.off ? html` <small>${OFF}</small>` : nothing}
                 </td>
-                <td>
-                  <button type="button" @click=${() => this.#run(binding)}>
-                    ${labelOf(binding)}
-                  </button>
-                </td>
+                <td>${labelOf(binding)}</td>
               </tr>
             `,
           )}
@@ -181,12 +179,6 @@ export class Shortcuts extends LitElement {
   #refresh = (): void => {
     this._rows = bindings(this.#dialog);
   };
-
-  /** Closes the dialog and runs the binding, as its keys would. */
-  #run(binding: Listed): void {
-    this.#dialog?.close();
-    binding.run();
-  }
 }
 
 define(tagName, Shortcuts);

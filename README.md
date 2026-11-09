@@ -586,8 +586,11 @@ gives with that dialog closed, the ones the page has outside it, in that order:
 
 - Its shadow root holds a table of two columns, Keys and Action. A row's keys are the binding's
   sequences, each key in a `<kbd>` as the foundation's keys grammar labels it, joined by `+`,
-  "then", and "or". Its action is a button named by the binding, its `register()` label or its
-  element's name, which closes the dialog and runs the binding as its keys would.
+  "then", and "or". Its action is the binding's name, its `register()` label or its element's
+  name, as plain text.
+- A row is no control: the list describes the shortcuts and runs none, and nothing in it takes
+  focus. With the dialog's Close its only other control, the dialog puts focus on the Close as it
+  opens, natively.
 - A row the reader's setting turns off, character keys alone while character keys are off, shows
   the word "off" after its keys, which assistive technology reads with them, in the muted text
   tier, and carries the class `off`. Combinations with Control, Alt, or Meta stay on.

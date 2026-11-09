@@ -2,10 +2,10 @@
 // seam alone: the help dialog that holds it and the foundation's keys module. Opened, the dialog
 // lists exactly the bindings bindings() gives with it closed, in its order: the Help button's ?,
 // the Search button's Control+K, the link's G then E, the section tree's H and L, which its
-// register() binds, and the page's own Alt+N, each key in a kbd, each action a button named by the
-// binding, and no Escape row; the dialog's own Close, bound to ? inside it, is left out. A row's
-// button closes the dialog and runs its binding, a registered one's handler and an element's
-// click. With character keys off, the rows of character keys alone show "off", shown and in the
+// register() binds, and the page's own Alt+N, each key in a kbd, each action the binding's name as
+// plain text, and no Escape row; the dialog's own Close, bound to ? inside it, is left out. Nothing
+// in the shadow root takes focus, so the dialog opened puts focus on its Close. With character
+// keys off, the rows of character keys alone show "off", shown and in the
 // text read, and the combinations don't; the list follows a change of the setting from another
 // tab while open, and the page's state at each open. The foundation's screen-reader note follows
 // the table, and the element holds no setting. No request for the foundation's keys-help module
@@ -70,8 +70,8 @@ async function pressQuestion(page: Page): Promise<void> {
 }
 
 /**
- * The list's rows: each row's keys, its kbd texts joined as shown and "off" dropped, its button's
- * name, and whether it is marked off, by the word shown and read in its keys cell and its class.
+ * The list's rows: each row's keys, its kbd texts joined as shown and "off" dropped, its action's
+ * text, and whether it is marked off, by the word shown and read in its keys cell and its class.
  */
 const rows = (page: Page): Promise<Row[]> =>
   page.evaluate(`[...${SHADOW}.querySelectorAll("tbody tr")].map((tr) => {
@@ -79,7 +79,7 @@ const rows = (page: Page): Promise<Row[]> =>
     const marked = small !== null && small.textContent.trim() === "off" && small.checkVisibility();
     return {
       keys: tr.cells[0].textContent.replace(/\\s+/g, " ").trim().replace(/ off$/, ""),
-      action: tr.cells[1].querySelector("button").textContent.trim(),
+      action: tr.cells[1].textContent.trim(),
       off: marked && tr.cells[0].textContent.trim().endsWith(" off") && tr.classList.contains("off"),
     };
   })`);
@@ -145,17 +145,22 @@ describe("sl-shortcuts", { timeout: 60_000 }, () => {
     assert.deepEqual(await page.evaluate(`window.errors`), []);
   });
 
-  test("a row's button closes the dialog and runs its binding", async () => {
-    await open(page);
-    await page.evaluate(`[...${SHADOW}.querySelectorAll("button")]
-      .find((button) => button.textContent.trim() === "New note").click()`);
-    assert.equal(await page.evaluate(`${HELP}.open`), false, "the dialog closed");
-    assert.equal(await page.evaluate(`window.ran`), 1, "the registered handler ran once");
-    await open(page);
-    await page.evaluate(`[...${SHADOW}.querySelectorAll("button")]
-      .find((button) => button.textContent.trim() === "End").click()`);
-    assert.equal(await page.evaluate(`${HELP}.open`), false, "the dialog closed");
-    await until(page, `location.hash === "#end"`);
+  test("the rows are plain text, and the dialog opened puts focus on its Close", async () => {
+    await page.evaluate(`${HELP}.showModal()`);
+    await page.evaluate(`document.querySelector("sl-shortcuts").updateComplete`);
+    const shown: { focusable: number; tabbable: number; focused: string | null } =
+      await page.evaluate(`({
+        focusable: ${SHADOW}.querySelectorAll(
+          "button, a[href], input, select, textarea, summary, [tabindex], [contenteditable]",
+        ).length,
+        tabbable: [...${SHADOW}.querySelectorAll("*")].filter((el) => el.tabIndex >= 0).length,
+        focused: document.activeElement === ${HELP}.querySelector('[command="close"]')
+          ? "close"
+          : document.activeElement?.localName ?? null,
+      })`);
+    assert.deepEqual(shown, { focusable: 0, tabbable: 0, focused: "close" });
+    assert.equal(await page.evaluate(`window.ran`), 0, "no binding ran");
+    await close(page);
   });
 
   test("with character keys off, their rows are marked off and the combinations' aren't", async () => {
