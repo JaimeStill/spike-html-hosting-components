@@ -87,24 +87,27 @@ once.
 <button
   type="button"
   class="glyph-button"
-  aria-label="Previous"
-  aria-keyshortcuts="H"
-  interestfor="previous-hint"
+  commandfor="help"
+  command="show-modal"
+  aria-label="Help"
+  data-keys="?"
+  interestfor="help-hint"
   aria-description=""
 >
   <svg …></svg>
-  <span aria-hidden="true"><kbd>H</kbd></span>
+  <span aria-hidden="true"><kbd>?</kbd></span>
 </button>
-<div id="previous-hint" class="glyph-hint" popover="hint" aria-hidden="true">Previous</div>
+<div id="help-hint" class="glyph-hint" popover="hint" aria-hidden="true">Help</div>
 ```
 
 ### Shortcut dialogs
 
 A shortcut dialog is a pattern, not an element: markup the page writes from native parts, which
 no module of this package defines. A key and its opener, a [glyph button](#glyph-buttons), open a
-native modal dialog that holds a heading naming it, whatever content its focused operation needs,
-and a Close glyph button with the hint Esc. It gives any focused interface overlaid on the page a
-key: the reader's settings and the page's shortcuts are its two instances here.
+native modal dialog that opens with a header row, a heading naming it and a Close glyph button
+with the hint Esc, over whatever content its focused operation needs. It gives any focused
+interface overlaid on the page a key: the reader's settings and the page's shortcuts are its two
+instances here.
 
 The opener is a native `<button class="glyph-button">`:
 
@@ -122,16 +125,25 @@ The opener is a native `<button class="glyph-button">`:
 
 The dialog is a native `<dialog>`:
 
-- `aria-labelledby` names it by its heading, an `h2` of the operation's name: a dialog takes no
-  name from a heading inside it on its own.
-- Its content is whatever the operation needs, and the operation applies as its content says:
-  there is no Save and no Cancel, and closing is the dialog's own concern, never the content's.
+- It opens with its header row, a `<header class="dialog-header">` holding its heading, an `h2`
+  of the operation's name, and, at the row's inline end, its Close. `aria-labelledby` names the
+  dialog by that heading: a dialog takes no name from a heading inside it on its own.
+- Its content follows the header row and is whatever the operation needs, and the operation
+  applies as its content says: there is no Save and no Cancel, and closing is the dialog's own
+  concern, never the content's.
 - Its Close is a glyph button, `commandfor="<dialog id>"` and `command="close"`, named "Close" by
   its `aria-label`, showing Octicons' `x-16` and the hint `<kbd>Esc</kbd>`, with its own interest
-  hint. Escape closes a modal dialog natively, from anywhere in it, a field included. The Close
+  hint. Nothing follows the content: the Close is the header row's, never a trailing one. Escape
+  closes a modal dialog natively, from anywhere in it, a field included. The Close
   takes no `data-keys`, and the opener's key doesn't close it: the keys module passes over a key
   pressed in a field, and a shortcut dialog's content is often one, so the key would close it
   only some of the time.
+
+This package ships no sheet for the dialog: the SDK's `site.css` lays it out. The header row puts
+the heading at its inline start and the Close at its inline end, aligned on their centers, with
+more space under it than between the content's own sections, so the first section stands apart
+from the heading. The Help dialog is as wide as its content, `fit-content`, up to `56rem`; the
+Settings dialog keeps its `56rem`.
 
 While the dialog is open the page behind it is inert and the keys module fires only the
 dialog's own keys, so the opener's key, outside it, fires nothing. When it closes, the browser
@@ -159,9 +171,8 @@ once:
 </button>
 <div id="settings-hint" class="glyph-hint" popover="hint" aria-hidden="true">Settings</div>
 <dialog id="settings" aria-labelledby="settings-title">
-  <h2 id="settings-title">Settings</h2>
-  <sl-settings></sl-settings>
-  <footer>
+  <header class="dialog-header">
+    <h2 id="settings-title">Settings</h2>
     <button
       type="button"
       class="glyph-button"
@@ -175,7 +186,8 @@ once:
       <span aria-hidden="true"><kbd>Esc</kbd></span>
     </button>
     <div id="settings-close-hint" class="glyph-hint" popover="hint" aria-hidden="true">Close</div>
-  </footer>
+  </header>
+  <sl-settings></sl-settings>
 </dialog>
 ```
 
@@ -191,11 +203,8 @@ the uploads' progress, which the page's script runs:
 
 ```html
 <dialog id="upload" aria-labelledby="upload-title">
-  <h2 id="upload-title">Upload</h2>
-  <label>Files <input type="file" multiple /></label>
-  <div class="drop">Or drop files here</div>
-  <ul class="uploads"></ul>
-  <footer>
+  <header class="dialog-header">
+    <h2 id="upload-title">Upload</h2>
     <button
       type="button"
       class="glyph-button"
@@ -209,7 +218,10 @@ the uploads' progress, which the page's script runs:
       <span aria-hidden="true"><kbd>Esc</kbd></span>
     </button>
     <div id="upload-close-hint" class="glyph-hint" popover="hint" aria-hidden="true">Close</div>
-  </footer>
+  </header>
+  <label>Files <input type="file" multiple /></label>
+  <div class="drop">Or drop files here</div>
+  <ul class="uploads"></ul>
 </dialog>
 ```
 
@@ -278,7 +290,8 @@ GitHub's heading id, with a nested `ul` or `ol` for the `h3`s under it:
   docks it. Where the page's layout has room for a side column, the page places the tree in it;
   below that width it places the tree in a drawer, as
   [spike-html-hosting-sdk](https://github.com/JaimeStill/spike-html-hosting-sdk) places it in an
-  [`sl-drawer`](#sl-drawer), docked as a column at the drawer's `dock` and a modal dialog below it.
+  [`sl-drawer`](#sl-drawer), docked as a column at the drawer's `dock` and a modal dialog below it:
+  the Contents drawer, docked from `70rem`, which the header's Contents button opens under C.
 - Link text never breaks inside a word: the element sets `overflow-wrap` and `word-break` to
   `normal`, so a page's own mid-word breaking, inherited from an ancestor, stops at the tree. A
   word wider than the column overflows it, so the column's minimum width is the page's to give.
@@ -399,22 +412,40 @@ a switch between the modes swaps only the shadow root's wrapper around the same 
 - `open` and `close` go out, bubbling and composed, each time the modal drawer opens or closes,
   never on a switch between the modes or on removal. The mode is a custom state, `docked` or
   `drawer`.
+- Following a link in the modal drawer leaves it open: the drawer doesn't close itself, so a page
+  whose drawer holds links calls `close()` from its own script at the link's click, as the site
+  shell's script below does.
 
-A site shell holds its site index in a drawer labeled "Pages", and its header holds the opener,
-page markup and the page's script rather than the drawer's: a button named "Pages" by its
-`aria-label`, showing its glyph and the key hint P in a `<kbd>`, bound to P by the foundation's
-keys module through `data-keys="p"`, shown only below the drawer's `dock` and only once the
-drawer is defined, which calls the drawer's `show()` and says through `aria-expanded` whether it
-is open. The header is the site nav and one group of buttons at its inline end, a
-`<div class="header-actions">`, which holds Pages, Help under ?, and Settings under S, in that
-order. Each is a [glyph button](#glyph-buttons), showing its glyph and its key hint, named by its
-`aria-label`, and showing that name in its interest hint. Help and Settings open their
+A site shell holds two drawers. Its site index is in a drawer labeled "Pages", `id="pages"`,
+docked from `86rem`; on the pages
+[spike-html-hosting-sdk](https://github.com/JaimeStill/spike-html-hosting-sdk) copies, the
+page's section tree is in a drawer labeled "Contents", `id="contents"`, docked from `70rem`,
+which the SDK writes: `<sl-drawer id="contents" label="Contents" dock="70rem">` holding an
+[`sl-section-tree`](#sl-section-tree) of the page's section links. Each drawer's opener is in the
+header, page markup and the page's script rather than the drawer's:
+
+- Pages, a button named "Pages" by its `aria-label`, showing Octicons' `list-unordered-16` and
+  the key hint P in a `<kbd>`, bound to P by the foundation's keys module through
+  `data-keys="p"`.
+- Contents, a button named "Contents" by its `aria-label`, showing Octicons' `list-ordered-16`
+  and the key hint C, bound to C through `data-keys="c"`.
+
+Each opener is shown only below its drawer's `dock`, `86rem` for Pages and `70rem` for Contents,
+and only once the drawer is defined; it calls its drawer's `show()` and says through
+`aria-expanded` whether the drawer is open. Following a link in either drawer closes it, by the
+page's script, so the link's navigation and its scroll land on the page the drawer covered.
+
+The header is the site nav and one group of buttons at its inline end, a
+`<div class="header-actions">`, which holds Pages, Contents, Help under ?, and Settings under S,
+in that order. Each is a [glyph button](#glyph-buttons), showing its glyph and its key hint, named
+by its `aria-label`, and showing that name in its interest hint. Help and Settings open their
 [shortcut dialogs](#shortcut-dialogs), each closed by its Close or Escape. The page's markup names
 each glyph by a marker, an empty `<svg data-icon="<set>/<name>">`, which
 [spike-html-hosting-sdk](https://github.com/JaimeStill/spike-html-hosting-sdk) fills with the
-icons module's `svg` at build: Octicons' `list-unordered-16` for Pages, `question-16` for Help,
-`gear-16` for Settings, and `x-16` for each dialog's Close. The SDK's `site.css` lays out the
-header and its `header-actions` group. A page links the foundation's full page entry,
+icons module's `svg` at build: Octicons' `list-unordered-16` for Pages, `list-ordered-16` for
+Contents, `question-16` for Help, `gear-16` for Settings, and `x-16` for each dialog's Close. The
+SDK's `site.css` lays out the header and its `header-actions` group: one row, and below `40rem`
+two, the site nav over the group. A page links the foundation's full page entry,
 `page-full.css`, then this package's `glyph-button.css`, then the SDK's `site.css`, and imports
 `shortcuts.js` and `settings.js` beside the elements it shows:
 
@@ -437,6 +468,21 @@ header and its `header-actions` group. A page links the foundation's full page e
       <span aria-hidden="true"><kbd>P</kbd></span>
     </button>
     <div id="pages-hint" class="glyph-hint" popover="hint" aria-hidden="true">Pages</div>
+    <button
+      type="button"
+      class="glyph-button contents-opener"
+      aria-controls="contents"
+      aria-haspopup="dialog"
+      aria-expanded="false"
+      aria-label="Contents"
+      data-keys="c"
+      interestfor="contents-hint"
+      aria-description=""
+    >
+      <svg data-icon="octicon/list-ordered-16"></svg>
+      <span aria-hidden="true"><kbd>C</kbd></span>
+    </button>
+    <div id="contents-hint" class="glyph-hint" popover="hint" aria-hidden="true">Contents</div>
     <button
       type="button"
       class="glyph-button"
@@ -467,7 +513,15 @@ header and its `header-actions` group. A page links the foundation's full page e
     <div id="settings-hint" class="glyph-hint" popover="hint" aria-hidden="true">Settings</div>
   </div>
 </header>
-<sl-drawer label="Pages" id="pages">
+<main>…</main>
+<sl-drawer id="contents" label="Contents" dock="70rem">
+  <sl-section-tree>
+    <ul>
+      …
+    </ul>
+  </sl-section-tree>
+</sl-drawer>
+<sl-drawer id="pages" label="Pages" dock="86rem">
   <sl-site-index label="Site">
     <ul>
       …
@@ -475,9 +529,8 @@ header and its `header-actions` group. A page links the foundation's full page e
   </sl-site-index>
 </sl-drawer>
 <dialog id="help" aria-labelledby="help-title">
-  <h2 id="help-title">Keyboard shortcuts</h2>
-  <sl-shortcuts></sl-shortcuts>
-  <footer>
+  <header class="dialog-header">
+    <h2 id="help-title">Keyboard shortcuts</h2>
     <button
       type="button"
       class="glyph-button"
@@ -491,12 +544,12 @@ header and its `header-actions` group. A page links the foundation's full page e
       <span aria-hidden="true"><kbd>Esc</kbd></span>
     </button>
     <div id="help-close-hint" class="glyph-hint" popover="hint" aria-hidden="true">Close</div>
-  </footer>
+  </header>
+  <sl-shortcuts></sl-shortcuts>
 </dialog>
 <dialog id="settings" aria-labelledby="settings-title">
-  <h2 id="settings-title">Settings</h2>
-  <sl-settings></sl-settings>
-  <footer>
+  <header class="dialog-header">
+    <h2 id="settings-title">Settings</h2>
     <button
       type="button"
       class="glyph-button"
@@ -510,36 +563,54 @@ header and its `header-actions` group. A page links the foundation's full page e
       <span aria-hidden="true"><kbd>Esc</kbd></span>
     </button>
     <div id="settings-close-hint" class="glyph-hint" popover="hint" aria-hidden="true">Close</div>
-  </footer>
+  </header>
+  <sl-settings></sl-settings>
 </dialog>
 ```
 
 ```css
-.pages-opener {
+.pages-opener,
+.contents-opener {
   display: none;
 }
-@media (width < 48rem) {
-  body:has(sl-drawer:defined) .pages-opener {
+@media (width < 86rem) {
+  body:has(#pages:defined) .pages-opener {
+    display: inline-flex;
+  }
+}
+@media (width < 70rem) {
+  body:has(#contents:defined) .contents-opener {
     display: inline-flex;
   }
 }
 ```
 
 ```js
-const drawer = document.querySelector("sl-drawer");
-const opener = document.querySelector(".pages-opener");
-opener.addEventListener("click", () => drawer.show());
-const expanded = () => opener.setAttribute("aria-expanded", String(drawer.open));
-drawer.addEventListener("open", expanded);
-drawer.addEventListener("close", expanded);
+for (const id of ["pages", "contents"]) {
+  const drawer = document.getElementById(id);
+  const opener = document.querySelector(`[aria-controls="${id}"]`);
+  if (!drawer || !opener) continue;
+  opener.addEventListener("click", () => drawer.show());
+  const expanded = () => opener.setAttribute("aria-expanded", String(drawer.open));
+  drawer.addEventListener("open", expanded);
+  drawer.addEventListener("close", expanded);
+  drawer.addEventListener("click", (event) => {
+    if (event.target instanceof Element && event.target.closest("a[href]")) drawer.close();
+  });
+}
 ```
 
-The keys module clicks only a rendered control, so while the drawer is docked and its opener
-hidden, P is neither listed nor fired; while the drawer is open, a modal, the keys module fires
-none of the page's keys, and Escape or the Close button closes it. A site that docks its index at
-another width sets the drawer's `dock` and its opener's media query to the same length. With no
-script the drawer is undefined, so the index renders as the page's own and the opener stays
-hidden.
+The keys module clicks only a rendered control, so while a drawer is docked and its opener
+hidden, its key is neither listed nor fired; while a drawer is open, a modal, the keys module
+fires none of the page's keys, and Escape, its Close button, or a followed link closes it. A site
+that docks a drawer at another width sets the drawer's `dock` and its opener's media query to the
+same length. With no script the drawers are undefined, so the index and the section tree render
+as the page's own and the openers stay hidden.
+
+The page's keys are then P for Pages and C for Contents, each while its opener shows; ? for Help
+and S for Settings; J and K for the next and the previous section, from
+[`sl-section-tree`](#sl-section-tree); and, on the pages the SDK copies, H and L for the previous
+and the next page, from the SDK's pager links.
 
 ### `sl-shortcuts`
 
