@@ -20,6 +20,7 @@ import type { Browser, Page } from "@jaimestill/spike-html-apps-tooling/browser.
 import { serve } from "@jaimestill/spike-html-apps-tooling/server.js";
 import type { Server } from "@jaimestill/spike-html-apps-tooling/server.js";
 
+import { noteIn, SHORTCUTS } from "../unit/note.ts";
 import { served } from "./support/served.ts";
 
 const FIXTURE = "/test/fixtures/shortcuts.html";
@@ -30,10 +31,8 @@ const SHADOW = `document.querySelector("sl-shortcuts").shadowRoot`;
 /** The help dialog, in a page expression. */
 const HELP = `document.querySelector("#help")`;
 
-/** The foundation's screen-reader note, word for word. */
-const NOTE =
-  "Screen readers: a screen reader may take a key before the page does. To pass the next key " +
-  "through, press NVDA+F2 in NVDA, JAWS+3 in JAWS, Narrator+3 in Narrator, or VO+Tab in VoiceOver.";
+/** The element's screen-reader note, read from src/; the unit tier holds it to the foundation's. */
+const NOTE = noteIn(SHORTCUTS);
 
 /** The fixture's bindings as the list shows them, in bindings()'s order, character keys on. */
 const ROWS = [
