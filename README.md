@@ -530,7 +530,7 @@ row's inline start, aligned with the nav. A page links the foundation's full pag
 </sl-drawer>
 <dialog id="help" aria-labelledby="help-title">
   <header class="dialog-header">
-    <h2 id="help-title">Keyboard shortcuts</h2>
+    <h2 id="help-title" tabindex="-1" autofocus>Keyboard shortcuts</h2>
     <button
       type="button"
       class="glyph-button"
@@ -622,7 +622,7 @@ gives with that dialog closed, the ones the page has outside it, in that order:
 ```html
 <dialog id="help" aria-labelledby="help-title">
   <header class="dialog-header">
-    <h2 id="help-title">Keyboard shortcuts</h2>
+    <h2 id="help-title" tabindex="-1" autofocus>Keyboard shortcuts</h2>
     …
   </header>
   <sl-shortcuts></sl-shortcuts>
@@ -634,8 +634,8 @@ gives with that dialog closed, the ones the page has outside it, in that order:
   "then", and "or". Its action is the binding's name, its `register()` label or its element's
   name, as plain text.
 - A row is no control: the list describes the shortcuts and runs none, and nothing in it takes
-  focus. With the dialog's Close its only other control, the dialog puts focus on the Close as it
-  opens, natively.
+  focus. The dialog's title heading, `tabindex="-1"` and `autofocus`, takes focus as the dialog
+  opens, not its Close, so the Close shows its hint only when tabbed to or hovered.
 - A row the reader's setting turns off, character keys alone while character keys are off, shows
   the word "off" after its keys, which assistive technology reads with them, in the muted text
   tier, and carries the class `off`. Combinations with Control, Alt, or Meta stay on.
