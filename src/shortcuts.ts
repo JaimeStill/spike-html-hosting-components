@@ -88,7 +88,7 @@ function keysOf(sequences: Sequence[]): (string | TemplateResult)[] {
  * page has while the reader is outside it, in its order:
  *
  *   <dialog id="help" aria-labelledby="help-title">
- *     <h2 id="help-title">Keyboard shortcuts</h2>
+ *     <h2 id="help-title" tabindex="-1" autofocus>Keyboard shortcuts</h2>
  *     <sl-shortcuts></sl-shortcuts>
  *     …
  *   </dialog>
@@ -96,8 +96,9 @@ function keysOf(sequences: Sequence[]): (string | TemplateResult)[] {
  * The shadow root holds a table of two columns, Keys and Action. A row's keys are each binding's
  * sequences, each key in a kbd as the keys grammar labels it; its action is the binding's name,
  * its registered label or its element's name, as plain text. A row is no control: the list only
- * describes the shortcuts, so nothing in it takes focus, and a dialog whose only other control is
- * its Close puts focus there natively as it opens. A row the reader's setting turns off, one whose
+ * describes the shortcuts, so nothing in it takes focus. The dialog's title heading takes focus as
+ * the dialog opens, by its autofocus, not the dialog's Close, so the Close shows its hint only when
+ * tabbed to or hovered. A row the reader's setting turns off, one whose
  * every sequence is character keys alone while character keys are off, carries the word "off"
  * after its keys, which is shown and read, and the class off. No row is written that bindings()
  * doesn't give: the foundation's fixed Escape row, which releases a field and is no binding, is

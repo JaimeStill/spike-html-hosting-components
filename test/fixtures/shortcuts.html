@@ -4,11 +4,12 @@
      sequence G then E, a Search button bound to Control+K, which the off switch leaves on, an
      sl-section-tree whose J and K its register() binds, and a binding the page registers itself,
      Alt+N, that counts its runs in window.ran. The dialog's Close is bound to ? too, inside the
-     dialog, so bindings() leaves it out, and is the dialog's only control, so it takes focus as
-     the dialog opens. The foundation's full entry styles the page, and window.keys is the
-     installed foundation's keys module, the one the element reads. window.errors collects every
-     error and unhandled rejection the page raises; window.ready settles once both elements have
-     rendered and the page's binding is registered. The import map is section-tree.html's. -->
+     dialog, so bindings() leaves it out, and names its interest hint; the dialog's title heading
+     takes focus as the dialog opens, by its autofocus, so the hint shows only on interest. The
+     foundation's full entry styles the page, and window.keys is the installed foundation's keys
+     module, the one the element reads. window.errors collects every error and unhandled
+     rejection the page raises; window.ready settles once both elements have rendered and the
+     page's binding is registered. The import map is section-tree.html's. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -79,9 +80,18 @@
       <p>The last section.</p>
     </main>
     <dialog id="help" aria-labelledby="help-title">
-      <h2 id="help-title">Keyboard shortcuts</h2>
+      <h2 id="help-title" tabindex="-1" autofocus>Keyboard shortcuts</h2>
       <sl-shortcuts></sl-shortcuts>
-      <button type="button" commandfor="help" command="close" data-keys="?">Close <kbd>?</kbd></button>
+      <button
+        type="button"
+        commandfor="help"
+        command="close"
+        data-keys="?"
+        interestfor="help-close-hint"
+      >
+        Close <kbd>?</kbd>
+      </button>
+      <div id="help-close-hint" popover="hint">Close</div>
     </dialog>
   </body>
 </html>

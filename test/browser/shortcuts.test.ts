@@ -4,7 +4,8 @@
 // the Search button's Control+K, the link's G then E, the section tree's J and K, which its
 // register() binds, and the page's own Alt+N, each key in a kbd, each action the binding's name as
 // plain text, and no Escape row; the dialog's own Close, bound to ? inside it, is left out. Nothing
-// in the shadow root takes focus, so the dialog opened puts focus on its Close. With character
+// in the shadow root takes focus, and the dialog opened by ? puts focus on its title heading, by
+// its autofocus, so its Close's interest hint stays closed. With character
 // keys off, the rows of character keys alone show "off", shown and in the text read, and the
 // combinations don't; the list follows a change of the setting from another tab while open, and
 // the page's state at each open. The foundation's screen-reader note follows the table, and the
@@ -145,20 +146,26 @@ describe("sl-shortcuts", { timeout: 60_000 }, () => {
     assert.deepEqual(await page.evaluate(`window.errors`), []);
   });
 
-  test("the rows are plain text, and the dialog opened puts focus on its Close", async () => {
-    await page.evaluate(`${HELP}.showModal()`);
-    await page.evaluate(`document.querySelector("sl-shortcuts").updateComplete`);
-    const shown: { focusable: number; tabbable: number; focused: string | null } =
+  // The title heading's autofocus takes focus as ? opens the dialog, not its first control, the
+  // Close, so the Close's interest hint stays closed: read once the browser's interest delay has
+  // passed, as keyboard focus on the Close would have shown it by then.
+  test("the rows are plain text, and the dialog opened by ? puts focus on its title, its Close's hint closed", async () => {
+    await open(page);
+    await page.evaluate(`new Promise((resolve) => setTimeout(resolve, 1500))`);
+    const shown: { focusable: number; tabbable: number; focused: string | null; hint: boolean } =
       await page.evaluate(`({
         focusable: ${SHADOW}.querySelectorAll(
           "button, a[href], input, select, textarea, summary, [tabindex], [contenteditable]",
         ).length,
         tabbable: [...${SHADOW}.querySelectorAll("*")].filter((el) => el.tabIndex >= 0).length,
-        focused: document.activeElement === ${HELP}.querySelector('[command="close"]')
-          ? "close"
-          : document.activeElement?.localName ?? null,
+        focused: document.activeElement === document.querySelector("#help-title")
+          ? "title"
+          : document.activeElement === ${HELP}.querySelector('[command="close"]')
+            ? "close"
+            : document.activeElement?.localName ?? null,
+        hint: ${HELP}.querySelector('[command="close"]').interestForElement.matches(":popover-open"),
       })`);
-    assert.deepEqual(shown, { focusable: 0, tabbable: 0, focused: "close" });
+    assert.deepEqual(shown, { focusable: 0, tabbable: 0, focused: "title", hint: false });
     assert.equal(await page.evaluate(`window.ran`), 0, "no binding ran");
     await close(page);
   });
