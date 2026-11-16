@@ -8,8 +8,8 @@
 // default, and opened modally by show(), toggle(), or open, open in its markup or set before it is
 // connected included, which is undone while docked, a dialog named by its visible heading and
 // covering the viewport edge to edge, its header in view while its content scrolls, the page
-// behind inert and focus on its heading, however it opened, which draws no outline, Close's hint
-// closed until Tab reaches Close, closed by its Close button, Escape, close(), toggle(), or open,
+// behind inert and focus on its heading, however it opened, which draws no outline, the Close's
+// hint closed until Tab reaches the Close; closed by its Close button, Escape, close(), toggle(), or open,
 // focus returned to the opener; the Close button showing the x-16 glyph alone, named Close and the
 // label by its visually hidden text, which its slot replaces; the Close button a glyph button
 // whose interest hint, shown on hover and on its keyboard focus, is its name, Escape with it shown
@@ -721,12 +721,16 @@ describe("drawer", { timeout: 60_000 }, () => {
     await until(page, `document.querySelector("sl-drawer").shadowRoot.activeElement === ${CLOSE}`);
   };
 
-  // However the drawer opens, the heading takes focus, by its autofocus, not the Close button,
-  // whose hint stays closed: read once the browser's interest delay has passed, as keyboard focus
-  // on the Close would have shown it by then. The heading draws no outline, though, opened from a
-  // focused opener with no pointer, it matches :focus-visible, which the foundation outlines; after
-  // a click it doesn't match, and the outline is none either way. Tab moves focus on to the Close,
-  // whose hint then shows, and Escape closes the drawer, focus back on the opener.
+  // However the drawer opens, the heading takes focus, by its autofocus, and the Close button
+  // never does, not even in passing, by the focus events the shadow root heard from before it
+  // opened. The Close's hint stays closed: a hint that never opens sends no event to wait on, so
+  // it is read after a wait, 1.5 s, past Chromium's interest delay, 0.25 s at "normal", by which
+  // time focus on the Close would have shown it; a slower browser can make the read pass early,
+  // never fail, and the focus events carry the cause without a wait. The heading draws no outline,
+  // though, opened from a focused opener with no pointer, it matches :focus-visible, which the
+  // foundation outlines; after a click it doesn't match, and the outline is none either way. Tab
+  // moves focus on to the Close, whose hint then shows, and Escape closes the drawer, focus back on
+  // the opener.
   for (const [how, open, visible] of [
     ["show()", () => call("show"), true],
     ["toggle()", () => call("toggle"), true],
@@ -744,35 +748,26 @@ describe("drawer", { timeout: 60_000 }, () => {
     test(`opened by ${how}, focus is on its heading, outlined not at all, and Close's hint closed until Tab reaches Close`, async () => {
       await mount(NARROW);
       await page.evaluate(`document.querySelector("#opener").focus()`);
+      await page.evaluate(`(() => {
+          window.focusedIn = [];
+          document.querySelector("sl-drawer").shadowRoot.addEventListener("focusin", (event) =>
+            window.focusedIn.push(event.target.localName));
+        })()`);
       await open();
       await until(page, `document.querySelector("sl-drawer").open`);
       await slid();
       await page.evaluate(`new Promise((resolve) => setTimeout(resolve, 1500))`);
-      const opened: {
-        focused: string | null;
-        close: boolean;
-        hint: boolean;
-        visible: boolean;
-        outline: string;
-      } = await page.evaluate(`(() => {
-          const root = document.querySelector("sl-drawer").shadowRoot;
-          const heading = root.querySelector("dialog h2");
-          const style = getComputedStyle(heading);
+      const opened: { focusedIn: string[]; hint: boolean; visible: boolean; outline: string } =
+        await page.evaluate(`(() => {
+          const heading = document.querySelector("sl-drawer").shadowRoot.querySelector("dialog h2");
           return {
-            focused: root.activeElement === heading ? "heading" : root.activeElement?.localName ?? null,
-            close: root.activeElement === ${CLOSE},
+            focusedIn: window.focusedIn,
             hint: ${CLOSE}.interestForElement.matches(":popover-open"),
             visible: heading.matches(":focus-visible"),
-            outline: style.outlineStyle,
+            outline: getComputedStyle(heading).outlineStyle,
           };
         })()`);
-      assert.deepEqual(opened, {
-        focused: "heading",
-        close: false,
-        hint: false,
-        visible,
-        outline: "none",
-      });
+      assert.deepEqual(opened, { focusedIn: ["h2"], hint: false, visible, outline: "none" });
       assert.equal((await read()).focused, "drawer h2");
       await press("Tab", 9);
       await until(
