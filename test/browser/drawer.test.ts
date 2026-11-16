@@ -8,7 +8,8 @@
 // default, and opened modally by show(), toggle(), or open, open in its markup or set before it is
 // connected included, which is undone while docked, a dialog named by its visible heading and
 // covering the viewport edge to edge, its header in view while its content scrolls, the page
-// behind inert and focus inside, closed by its Close button, Escape, close(), toggle(), or open,
+// behind inert and focus on its heading, however it opened, which draws no outline, Close's hint
+// closed until Tab reaches Close, closed by its Close button, Escape, close(), toggle(), or open,
 // focus returned to the opener; the Close button showing the x-16 glyph alone, named Close and the
 // label by its visually hidden text, which its slot replaces; the Close button a glyph button
 // whose interest hint, shown on hover and on its keyboard focus, is its name, Escape with it shown
@@ -589,7 +590,7 @@ describe("drawer", { timeout: 60_000 }, () => {
       labelledby: "title",
       label: null,
     });
-    assert.equal(shown.focused, "drawer button", "focus moves to the dialog's first control");
+    assert.equal(shown.focused, "drawer h2", "focus moves to the dialog's heading");
     assert.equal(await pageLive(), false, "the page behind takes no focus");
     assert.deepEqual(shown.heard, [{ type: "open", detail: {}, bubbles: true, composed: true }]);
     // Tab stays among the drawer's controls, or leaves for the browser's own, never the page's.
@@ -713,10 +714,82 @@ describe("drawer", { timeout: 60_000 }, () => {
     assert.ok((await exposed(page, "button")).includes("Fermer Pages"), "the button's name");
   });
 
-  test("keyboard focus on the Close button, as the drawer opens, shows its hint beside it", async () => {
-    await mount(NARROW);
+  // The drawer opened by the keyboard, then Tab from its heading to the Close button.
+  const tabToClose = async () => {
     await openByKeyboard();
+    await press("Tab", 9);
     await until(page, `document.querySelector("sl-drawer").shadowRoot.activeElement === ${CLOSE}`);
+  };
+
+  // However the drawer opens, the heading takes focus, by its autofocus, not the Close button,
+  // whose hint stays closed: read once the browser's interest delay has passed, as keyboard focus
+  // on the Close would have shown it by then. The heading draws no outline, though, opened from a
+  // focused opener with no pointer, it matches :focus-visible, which the foundation outlines; after
+  // a click it doesn't match, and the outline is none either way. Tab moves focus on to the Close,
+  // whose hint then shows, and Escape closes the drawer, focus back on the opener.
+  for (const [how, open, visible] of [
+    ["show()", () => call("show"), true],
+    ["toggle()", () => call("toggle"), true],
+    ["open set true", () => page.evaluate(`document.querySelector("sl-drawer").open = true`), true],
+    [
+      "a click on an opener",
+      async () => {
+        await page.evaluate(`document.querySelector("#opener").blur()`);
+        await clickAt(await center("#opener"));
+      },
+      false,
+    ],
+    ["Enter on the opener", () => press("Enter", 13, "\r"), true],
+  ] as const) {
+    test(`opened by ${how}, focus is on its heading, outlined not at all, and Close's hint closed until Tab reaches Close`, async () => {
+      await mount(NARROW);
+      await page.evaluate(`document.querySelector("#opener").focus()`);
+      await open();
+      await until(page, `document.querySelector("sl-drawer").open`);
+      await slid();
+      await page.evaluate(`new Promise((resolve) => setTimeout(resolve, 1500))`);
+      const opened: {
+        focused: string | null;
+        close: boolean;
+        hint: boolean;
+        visible: boolean;
+        outline: string;
+      } = await page.evaluate(`(() => {
+          const root = document.querySelector("sl-drawer").shadowRoot;
+          const heading = root.querySelector("dialog h2");
+          const style = getComputedStyle(heading);
+          return {
+            focused: root.activeElement === heading ? "heading" : root.activeElement?.localName ?? null,
+            close: root.activeElement === ${CLOSE},
+            hint: ${CLOSE}.interestForElement.matches(":popover-open"),
+            visible: heading.matches(":focus-visible"),
+            outline: style.outlineStyle,
+          };
+        })()`);
+      assert.deepEqual(opened, {
+        focused: "heading",
+        close: false,
+        hint: false,
+        visible,
+        outline: "none",
+      });
+      assert.equal((await read()).focused, "drawer h2");
+      await press("Tab", 9);
+      await until(
+        page,
+        `document.querySelector("sl-drawer").shadowRoot.activeElement === ${CLOSE}`,
+      );
+      await untilHint(page, CLOSE, true);
+      await press("Escape", 27);
+      await closedHeard(1);
+      const shown = await read();
+      assert.deepEqual([shown.open, shown.dialogOpen, shown.focused], [false, false, "opener"]);
+    });
+  }
+
+  test("keyboard focus on the Close button, tabbed to from the heading, shows its hint beside it", async () => {
+    await mount(NARROW);
+    await tabToClose();
     await untilHint(page, CLOSE, true);
     const shown = await hintShown(page, CLOSE);
     assert.ok(shown.open && (shown.below || shown.above) && shown.overlaps, JSON.stringify(shown));
@@ -748,7 +821,7 @@ describe("drawer", { timeout: 60_000 }, () => {
   // the closing toggle is in it, not once :popover-open is false, which can come first.
   for (const [how, show] of [
     ["hovering it", hoverClose],
-    ["keyboard focus on it", openByKeyboard],
+    ["keyboard focus on it", tabToClose],
   ] as const) {
     test(`Escape with the Close button's hint shown by ${how} hides the hint and closes the drawer in one press`, async () => {
       await mount(NARROW);
@@ -872,12 +945,12 @@ describe("drawer", { timeout: 60_000 }, () => {
     assert.deepEqual([shown.modal, shown.sent], [true, ["open"]]);
   });
 
-  test("open in its markup below dock opens it modally as the page loads, focus on its Close button; open goes out once", async () => {
+  test("open in its markup below dock opens it modally as the page loads, focus on its heading; open goes out once", async () => {
     await mount(NARROW, {}, "", HEIGHT, { attributes: "open" });
     const shown = await read();
     assert.deepEqual(
       [shown.mode, shown.modal, shown.open, shown.attribute, shown.focused, shown.sent],
-      ["drawer", true, true, true, "drawer button", ["open"]],
+      ["drawer", true, true, true, "drawer h2", ["open"]],
     );
     assert.deepEqual(shown.heard, [{ type: "open", detail: {}, bubbles: true, composed: true }]);
   });
@@ -902,7 +975,7 @@ describe("drawer", { timeout: 60_000 }, () => {
         [shown.mode, shown.modal, shown.open, shown.attribute, shown.sent],
         [mode, modal, modal, modal, sent],
       );
-      if (modal) assert.equal(shown.focused, "drawer button");
+      if (modal) assert.equal(shown.focused, "drawer h2");
     });
   }
 
@@ -1009,7 +1082,7 @@ describe("drawer", { timeout: 60_000 }, () => {
     // It opens again from the same content.
     await call("show");
     shown = await read();
-    assert.deepEqual([shown.modal, shown.focused], [true, "drawer button"]);
+    assert.deepEqual([shown.modal, shown.focused], [true, "drawer h2"]);
     // And back in the dialog's header, beside its Close button, the one heading still.
     await slid();
     assert.deepEqual(await exposed(page, "heading"), ["Documents"], "a drawer again, one heading");

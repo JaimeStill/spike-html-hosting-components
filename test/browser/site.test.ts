@@ -2,8 +2,8 @@
 // under test/fixtures/sites/, each served at its own base on one origin, through their public
 // seams alone. With no script the site index renders, wide and narrow, the Pages button hidden,
 // and the page reads without the site nav; the site index sits in the Pages drawer, docked beside
-// the article wide, and narrow a modal dialog the Pages button or P opens, which Escape or its
-// Close button closes, focus back on the button; no navigation text breaks inside a word,
+// the article wide, and narrow a modal dialog the Pages button or P opens, focus on its heading,
+// which Escape or its Close button closes, focus back on the button; no navigation text breaks inside a word,
 // whatever the page inherits; the index marks the page on screen, a directory labeled by its
 // index page or its name; the nav lists the components' sites and marks the current one by the
 // path's first segment; with one site deployed ahead, on a release that lists a fourth site, the
@@ -563,7 +563,7 @@ describe("the site components", { timeout: 180_000 }, () => {
       await until(page, `document.querySelector("sl-drawer").open`);
       const open = await drawn();
       assert.deepEqual([open.modal, open.links, open.opener.expanded], [true, true, "true"]);
-      assert.equal(open.focused, "Close Pages", "focus is on the dialog's Close button");
+      assert.equal(open.focused, "Pages", "focus is on the dialog's heading, not its Close");
       await press(ESCAPE);
       await until(page, `!document.querySelector("sl-drawer").open`);
       const after = await drawn();
@@ -681,7 +681,7 @@ describe("the site components", { timeout: 180_000 }, () => {
         await page.evaluate(
           `Promise.all(${shadow("sl-drawer")}.getAnimations().map((a) => a.finished)).then(() => {})`,
         );
-        // Opened, focus is on the Close button; Tab moves it to the drawer's next control.
+        // Opened, focus is on the heading; Tab moves it to the drawer's first control, its Close.
         await tab(page);
         const shown: {
           errors: string[];
