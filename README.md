@@ -21,8 +21,8 @@ a glyph the site and the components both use is in its bundle once. A site pins 
 their tags:
 
 ```
-pnpm add github:JaimeStill/spike-html-hosting-components#v0.5.0 \
-  github:JaimeStill/spike-html-apps-foundation#v0.3.0 \
+pnpm add github:JaimeStill/spike-html-hosting-components#v0.5.1 \
+  github:JaimeStill/spike-html-apps-foundation#v0.3.1 \
   github:JaimeStill/spike-html-hosting-icons#v0.1.0
 ```
 
@@ -402,12 +402,15 @@ a switch between the modes swaps only the shadow root's wrapper around the same 
   leaves it docked at every width.
 - Below `dock` it is closed until `show()`, `toggle()`, or `open` opens it as a native modal
   dialog covering the viewport, sliding in from the inline-start edge unless the reader asks for
-  reduced motion, the page behind inert and focus inside. Its header holds `label` as a visible
-  `h2` and a Close button that shows Octicons' `x-16` alone, named "Close" and the label by its
-  visually hidden text; the `close` slot replaces "Close" there, for a translation. It is a
+  reduced motion, the page behind inert. Its header holds `label` as a visible `h2` and a Close
+  button that shows Octicons' `x-16` alone, named "Close" and the label by its visually hidden
+  text; the `close` slot replaces "Close" there, for a translation. It is a
   [glyph button](#glyph-buttons), showing that name, the slot's text and the label, in its hint on
-  hover and keyboard focus. The Close button, Escape, `close()`, `toggle()`, or `open` set false
-  closes it, and focus returns to the element that held it.
+  hover and keyboard focus. Focus lands on the heading as the dialog opens, not on its Close, so
+  the Close shows its hint only when tabbed to or hovered: the heading, `tabindex="-1"` and
+  `autofocus`, isn't a control, Tab never reaches it, and it draws no focus outline. The Close
+  button, Escape, `close()`, `toggle()`, or `open` set false closes it, and focus returns to the
+  element that held it.
 - `open` and `close` go out, bubbling and composed, each time the modal drawer opens or closes,
   never on a switch between the modes or on removal. The mode is a custom state, `docked` or
   `drawer`.

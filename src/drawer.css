@@ -75,6 +75,14 @@ h2 {
   margin: 0;
   font-size: var(--text-l);
 }
+/* The drawer's heading, which takes focus as the dialog opens, by its tabindex="-1" and
+   autofocus, so that the Close button's hint doesn't show: the heading isn't a control, and Tab
+   never reaches it, so it draws none of the focus outline the foundation's :focus-visible rule
+   gives it as the drawer opens from a key. A page's own rule for a dialog's heading can't reach
+   the shadow root. */
+h2[tabindex="-1"]:focus {
+  outline: none;
+}
 /* The body scrolls in its padding box and clips there. A control that focus scrolls into view
    stops at the scroll padding, the body's padding, rather than at the clip edge, so its focus
    outline, which reaches past its box, stays whole at either edge, as it is at rest. */

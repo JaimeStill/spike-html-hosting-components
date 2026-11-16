@@ -6,6 +6,26 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the packag
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-16
+
+### Fixed
+
+- `sl-drawer`'s heading takes focus as the modal drawer opens, not its Close button, whose hint,
+  "Close" and the label, showed at once however the drawer opened. The dialog's `h2`, the label,
+  carries `tabindex="-1"` and `autofocus`, since Chromium 155 and 157 ignore `autofocus` on the
+  dialog element itself, so the Close shows its hint only when tabbed to or hovered. The heading
+  isn't a control, Tab never reaches it, and the drawer's own sheet keeps the focus outline off it.
+  Closing still returns focus to the opener, and the docked aside's heading never takes focus.
+
+### Changed
+
+- The foundation's dev pin, and the README's install line, are at
+  spike-html-apps-foundation `v0.3.1`, whose baseline veils only a modal dialog's backdrop; the
+  peer range stays `^0.3.0`. The drawer's scrim is a modal dialog's, and stays.
+- The toolchain is current: node 26.13.1, pnpm 12.21.0, chrome-headless-shell 157.0.8103.78 for
+  the browser tier, eslint 10.15.0, eslint-plugin-boundaries 7.4.4, prettier 3.10.1, and
+  jdx/mise-action v5.2.9 in the workflows.
+
 ## [0.5.0] - 2026-11-09
 
 The release removes `sl-page-header` and `sl-section-tree`'s bar, buttons, and `dock`, and moves

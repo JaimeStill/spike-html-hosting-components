@@ -43,7 +43,10 @@ export type CloseDetail = Record<string, never>;
  * Below `dock` the drawer is closed until `show()`, `toggle()`, or `open` opens it, a
  * native dialog shown by `showModal()`: it covers the viewport edge to edge, sliding in from the
  * inline-start edge, the right in a right-to-left context, the page behind it inert, and focus
- * moves inside it. Its header holds `label` as a visible `h2` that names the dialog, and a Close
+ * moves inside it, to its heading. Its header holds `label` as a visible `h2` that names the
+ * dialog, `tabindex="-1"` and `autofocus`, which takes focus as the dialog opens, not the Close
+ * button, so the Close shows its hint only when tabbed to or hovered; the heading isn't a control,
+ * Tab never reaches it, and it draws no focus outline. The header also holds a Close
  * button that shows Octicons' x-16, from the icons layer, alone: its name is the `close` slot's
  * text, "Close" by default, for a translation, then the label, "Close Documents", both visually
  * hidden. It is a glyph button, laid out by glyph-button.css, and shows its name on hover and
@@ -222,8 +225,9 @@ export class Drawer extends LitElement {
   }
 
   render() {
-    // The docked aside's header is the dialog's without its Close button: one heading, the
-    // label, naming the wrapper in either mode.
+    // The docked aside's header is the dialog's without its Close button, and its heading takes
+    // no focus, as the docked drawer never does: one heading, the label, naming the wrapper in
+    // either mode.
     if (!this.#narrow) {
       return html`<aside aria-labelledby="title">
         <header><h2 id="title">${this.label}</h2></header>
@@ -239,9 +243,13 @@ export class Drawer extends LitElement {
     // interest target's text its invoker's description, so the name would be read twice; the
     // empty aria-description comes first among the description's sources and leaves none, and
     // aria-hidden keeps the hint out of the accessibility tree while it shows.
+    // The heading takes focus as showModal() opens the dialog, by its autofocus, where the dialog's
+    // first control, the Close button, would take it and show its hint at once: Chromium ignores
+    // autofocus on the dialog element itself. tabindex="-1" makes it focusable but never tabbable,
+    // and drawer.css keeps the focus outline off it.
     return html`<dialog aria-labelledby="title" @close=${this.#closed}>
       <header>
-        <h2 id="title">${this.label}</h2>
+        <h2 id="title" tabindex="-1" autofocus>${this.label}</h2>
         <button
           type="button"
           class="glyph-button"
