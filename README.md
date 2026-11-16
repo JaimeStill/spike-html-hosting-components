@@ -21,8 +21,8 @@ a glyph the site and the components both use is in its bundle once. A site pins 
 their tags:
 
 ```
-pnpm add github:JaimeStill/spike-html-hosting-components#v0.5.0 \
-  github:JaimeStill/spike-html-apps-foundation#v0.3.0 \
+pnpm add github:JaimeStill/spike-html-hosting-components#v0.5.1 \
+  github:JaimeStill/spike-html-apps-foundation#v0.3.1 \
   github:JaimeStill/spike-html-hosting-icons#v0.1.0
 ```
 
