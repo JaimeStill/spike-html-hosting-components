@@ -408,8 +408,9 @@ a switch between the modes swaps only the shadow root's wrapper around the same 
   [glyph button](#glyph-buttons), showing that name, the slot's text and the label, in its hint on
   hover and keyboard focus. Focus lands on the heading as the dialog opens, not on its Close, so
   the Close shows its hint only when tabbed to or hovered: the heading, `tabindex="-1"` and
-  `autofocus`, isn't a control, Tab never reaches it, and it draws no focus outline. The Close button, Escape, `close()`, `toggle()`, or `open` set false
-  closes it, and focus returns to the element that held it.
+  `autofocus`, isn't a control, Tab never reaches it, and it draws no focus outline. The Close
+  button, Escape, `close()`, `toggle()`, or `open` set false closes it, and focus returns to the
+  element that held it.
 - `open` and `close` go out, bubbling and composed, each time the modal drawer opens or closes,
   never on a switch between the modes or on removal. The mode is a custom state, `docked` or
   `drawer`.

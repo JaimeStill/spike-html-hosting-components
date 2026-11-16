@@ -3,8 +3,8 @@
 // seams alone. With no script the site index renders, wide and narrow, the Pages button hidden,
 // and the page reads without the site nav; the site index sits in the Pages drawer, docked beside
 // the article wide, and narrow a modal dialog the Pages button or P opens, focus on its heading,
-// which Escape or its Close button closes, focus back on the button; no navigation text breaks inside a word,
-// whatever the page inherits; the index marks the page on screen, a directory labeled by its
+// which Escape or its Close button closes, focus back on the button; no navigation text breaks
+// inside a word, whatever the page inherits; the index marks the page on screen, a directory labeled by its
 // index page or its name; the nav lists the components' sites and marks the current one by the
 // path's first segment; with one site deployed ahead, on a release that lists a fourth site, the
 // ahead site's nav lists four and the one behind three, neither requesting a list, until each
